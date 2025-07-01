@@ -4,5 +4,5 @@ from . import objects, plans
 __all__ = [
     "ConfigReader",
     "objects",
-    "plans"
+    "plans",
 ]
