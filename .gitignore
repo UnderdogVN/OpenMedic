@@ -1,0 +1,4 @@
+.venv/**
+openmedic.egg-info
+uv.lock
+**/__pycache__/**
