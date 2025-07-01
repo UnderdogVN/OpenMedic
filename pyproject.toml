@@ -1,0 +1,22 @@
+[project]
+name = "openmedic"
+dynamic = ["version"]
+description = ""
+readme = "README.md"
+requires-python = "==3.10"
+dependencies = [
+    "click>=8.2.1",
+    "opencv-python>=4.11.0.86",
+    "pycocotools>=2.0.8",
+    "pyyaml>=6.0.2",
+    "torch>=2.2.2",
+    "torchvision>=0.17.2"
+]
+
+
+[project.scripts]
+openmedic = "openmedic.cli.cli_management:cli"
+
+
+[tool.setuptools.dynamic]
+version = {attr = "openmedic.__version__"}
