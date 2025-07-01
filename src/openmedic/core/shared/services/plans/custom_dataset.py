@@ -1,15 +1,19 @@
-from torch.utils.data import Dataset
-import os
-import cv2
-from typing import List, Optional, Union
-from pycocotools.coco import COCO
-import numpy as np
 import logging
-import torch
+import os
+from typing import List, Optional, Union
 
-from openmedic.core.shared.services.objects.transform import OpenMedicTransform, OpenMedicTransformOpBase
-from openmedic.core.shared.services.config import ConfigReader
+import cv2
+import numpy as np
+import torch
+from pycocotools.coco import COCO
+from torch.utils.data import Dataset
+
 import openmedic.core.shared.services.utils as utils
+from openmedic.core.shared.services.config import ConfigReader
+from openmedic.core.shared.services.objects.transform import (
+    OpenMedicTransform,
+    OpenMedicTransformOpBase,
+)
 
 
 class OpenMedicDataset(Dataset):
@@ -17,7 +21,7 @@ class OpenMedicDataset(Dataset):
         self,
         image_dir: str,
         annotation_path: str,
-        transform_ops: Optional[List[OpenMedicTransformOpBase]]
+        transform_ops: Optional[List[OpenMedicTransformOpBase]],
     ):
         """
         Input:
@@ -50,7 +54,9 @@ class OpenMedicDataset(Dataset):
         """Gets number of classes in dataset.
         Note: `num_classes = all category + negative class (background)`.
         """
-        return len(self.get_categories()) + 1 # num_classes = all category + negative class (background)
+        return (
+            len(self.get_categories()) + 1
+        )  # num_classes = all category + negative class (background)
 
     @classmethod
     def initialize_with_config(cls):
@@ -58,7 +64,7 @@ class OpenMedicDataset(Dataset):
         return cls(
             data_info["image_dir"],
             data_info["coco_annotation_path"],
-            cls._plan_transform()
+            cls._plan_transform(),
         )
 
     @staticmethod
@@ -74,20 +80,22 @@ class OpenMedicDataset(Dataset):
         for op_name, params in transform_plan_ops.items():
             if isinstance(params, dict):
                 transform_ops.append(
-                    OpenMedicTransform.get_op(op_name=op_name).initialize(**params)
+                    OpenMedicTransform.get_op(op_name=op_name).initialize(**params),
                 )
             elif isinstance(params, list):
                 transform_ops.append(
-                    OpenMedicTransform.get_op(op_name=op_name).initialize(*params)
+                    OpenMedicTransform.get_op(op_name=op_name).initialize(*params),
                 )
             else:
                 transform_ops.append(
-                    OpenMedicTransform.get_op(op_name=op_name).initialize([params])
+                    OpenMedicTransform.get_op(op_name=op_name).initialize([params]),
                 )
 
             op_names.append(op_name)
 
-        logging.info(f"[DatasetManager][_plan_transform]: Applied {', '.join(op_names)} operators.")
+        logging.info(
+            f"[DatasetManager][_plan_transform]: Applied {', '.join(op_names)} operators.",
+        )
 
         return transform_ops
 
@@ -95,7 +103,10 @@ class OpenMedicDataset(Dataset):
         image_transform = image.copy()
         gt_transform = gt.copy()
         for transform_op in self.transform_ops:
-            image_transform, gt_transform = transform_op.execute(image=image_transform, gt=gt_transform)
+            image_transform, gt_transform = transform_op.execute(
+                image=image_transform,
+                gt=gt_transform,
+            )
 
         return image_transform, gt_transform
 
@@ -110,9 +121,11 @@ class OpenMedicDataset(Dataset):
         gt: np.ndarray = utils.convert_to_gt(
             ann_ids=ann_ids,
             img_h=img_info["height"],
-            img_w=img_info["width"]
+            img_w=img_info["width"],
         )
-        image: np.ndarray = cv2.imread(os.path.join(self.image_dir, img_info["file_name"]))
+        image: np.ndarray = cv2.imread(
+            os.path.join(self.image_dir, img_info["file_name"]),
+        )
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.transform_ops:
             image, gt = self._apply_transform(image=image, gt=gt)

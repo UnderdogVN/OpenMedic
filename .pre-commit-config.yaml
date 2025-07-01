@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: requirements-txt-fixer
+
+  - repo: https://github.com/asottile/add-trailing-comma
+    rev: v3.2.0
+    hooks:
+    -   id: add-trailing-comma
+
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        python_spec: python3.10.18
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        profile: black
+        python_version: 3.10.18

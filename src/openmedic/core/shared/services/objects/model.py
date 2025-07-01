@@ -3,7 +3,8 @@ import torch.nn as nn
 
 class OpenMedicModelError(Exception):
     """Custom exception"""
-    def __init__(self, message: str=''):
+
+    def __init__(self, message: str = ""):
         self.message: str = message
         super().__init__(self.message)
 
@@ -24,9 +25,9 @@ class OpenMedicModel:
 
     @classmethod
     def get_model(cls, model_name) -> OpenMedicModelBase:
-        error_msg: str = ''
+        error_msg: str = ""
         try:
             return getattr(cls, model_name)
         except AttributeError:
-            error_msg=f"The {model_name} model does not exist."
+            error_msg = f"The {model_name} model does not exist."
             raise OpenMedicModelError(message=error_msg)

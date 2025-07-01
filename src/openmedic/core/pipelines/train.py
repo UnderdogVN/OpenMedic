@@ -1,11 +1,12 @@
 import argparse
 import logging
-from typing import List, Union
+import statistics
 import warnings
-from torch.utils.data import DataLoader, random_split
+from typing import List, Union
+
 import torch
 import torch.optim as optim
-import statistics
+from torch.utils.data import DataLoader, random_split
 
 import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
@@ -17,7 +18,10 @@ warnings.filterwarnings("ignore")
 
 def _init_objects(config_path: str) -> List[Union[OpenMedicDataset, OpenMedicTrainer]]:
     services.ConfigReader.initialize(config_path=config_path)
-    return services.OpenMedicDataset.initialize_with_config(), services.OpenMedicTrainer.initialize_with_config()
+    return (
+        services.OpenMedicDataset.initialize_with_config(),
+        services.OpenMedicTrainer.initialize_with_config(),
+    )
 
 
 def _get_pipeline_config(pipeline_info: dict) -> dict:
@@ -40,7 +44,7 @@ def _get_pipeline_config(pipeline_info: dict) -> dict:
         "is_shuffle": is_shuffle,
         "num_workers": num_workers,
         "seed": seed,
-        "is_gpu": is_gpu
+        "is_gpu": is_gpu,
     }
 
 
@@ -62,9 +66,7 @@ def _process_batch_images(images: torch.Tensor, device: str) -> torch.Tensor:
         2. Convert to float Tensor.
         3. Apply device for Tensor.
     """
-    return images \
-        .permute(0, 3, 1, 2) \
-        .float()
+    return images.permute(0, 3, 1, 2).float()
 
 
 def _process_batch(images: torch.Tensor, gts: torch.Tensor, device: str):
@@ -74,15 +76,19 @@ def _process_batch(images: torch.Tensor, gts: torch.Tensor, device: str):
     return images, gts
 
 
-def train_val_split(custom_dataset: OpenMedicDataset, train_ratio: float, seed: int) -> List[OpenMedicDataset]:
+def train_val_split(
+    custom_dataset: OpenMedicDataset,
+    train_ratio: float,
+    seed: int,
+) -> List[OpenMedicDataset]:
     generator: torch.Generator = torch.Generator().manual_seed(seed)
-    train_size: int= int(train_ratio * len(custom_dataset))
+    train_size: int = int(train_ratio * len(custom_dataset))
     val_size: int = len(custom_dataset) - train_size
 
     return random_split(
         dataset=custom_dataset,
         lengths=[train_size, val_size],
-        generator=generator
+        generator=generator,
     )
 
 
@@ -103,9 +109,7 @@ def _execute_monitor(monitor_info: dict):
 def init_arguments():
     parser = argparse.ArgumentParser(prog="")
 
-    parser.add_argument(
-        "--config-path", dest="config_path", required=True, default=''
-    )
+    parser.add_argument("--config-path", dest="config_path", required=True, default="")
     return parser
 
 
@@ -120,10 +124,14 @@ def run(*, pipeline_name: str, config_path: str):
     pipeline_config: dict = _get_pipeline_config(pipeline_info=pipeline_info)
     data_info: dict = services.ConfigReader.get_field(name="data")
     monitor_info: dict = services.ConfigReader.get_field(name="monitor")
-    logging.info(f"[{pipeline_name}][run]: Target dataset with: \n\tImage Directory: {data_info['image_dir']}\n\tCOCO File: {data_info['coco_annotation_path']}")
+    logging.info(
+        f"[{pipeline_name}][run]: Target dataset with: \n\tImage Directory: {data_info['image_dir']}\n\tCOCO File: {data_info['coco_annotation_path']}",
+    )
 
     if pipeline_config["is_gpu"] and device == "cpu":
-        logging.warning("User set to use GPU but the found the only CPU avaiable. Stopping processing...")
+        logging.warning(
+            "User set to use GPU but the found the only CPU avaiable. Stopping processing...",
+        )
         return {}
 
     train_dataset: OpenMedicDataset
@@ -131,20 +139,20 @@ def run(*, pipeline_name: str, config_path: str):
     train_dataset, val_dataset = train_val_split(
         custom_dataset=custom_dataset,
         train_ratio=pipeline_config["train_ratio"],
-        seed=pipeline_config["seed"]
+        seed=pipeline_config["seed"],
     )
     train_loader: DataLoader = DataLoader(
         dataset=train_dataset,
         batch_size=pipeline_config["batch_size"],
         shuffle=pipeline_config["is_shuffle"],
-        num_workers=pipeline_config["num_workers"]
+        num_workers=pipeline_config["num_workers"],
     )
 
     val_loader: DataLoader = DataLoader(
         dataset=val_dataset,
         batch_size=pipeline_config["batch_size"],
         shuffle=pipeline_config["is_shuffle"],
-        num_workers=pipeline_config["num_workers"]
+        num_workers=pipeline_config["num_workers"],
     )
 
     step: int
@@ -154,9 +162,7 @@ def run(*, pipeline_name: str, config_path: str):
     model: services.OpenMedicModelBase
     optimizer: optim.Optimizer
 
-    model, optimizer = custom_trainer.get_object(
-        names=["model", "optimizer"]
-    )
+    model, optimizer = custom_trainer.get_object(names=["model", "optimizer"])
 
     if pipeline_config["is_gpu"]:
         model = model.to(device=device)
@@ -164,7 +170,7 @@ def run(*, pipeline_name: str, config_path: str):
     n_epochs: int = pipeline_config["n_epochs"]
     for epoch in range(1, n_epochs + 1):
         logging.info(f"[{pipeline_name}][run]: Running epoch: {epoch}/{n_epochs}...")
-        model.train() # mode training
+        model.train()  # mode training
 
         step_train_metric_scores: list = []
         step_train_losses: list = []
@@ -191,14 +197,14 @@ def run(*, pipeline_name: str, config_path: str):
             if step % 10 == 0:
                 print(
                     f"\r\tTraining in step {step} with loss {statistics.mean(step_train_losses):.5f} and metric score: {statistics.mean(step_train_metric_scores):.5f}",
-                    end='',
-                    flush=True
+                    end="",
+                    flush=True,
                 )
         train_losses: float = statistics.mean(step_train_losses)
         train_metric_scores: float = statistics.mean(step_train_metric_scores)
         print(
             f"\r\tCompleted trainning at epoch {epoch} with loss {train_losses:.5f} and metric score: {train_metric_scores:.5f}",
-            flush=True
+            flush=True,
         )
 
         # Activate evaluation mode
@@ -216,21 +222,24 @@ def run(*, pipeline_name: str, config_path: str):
                 if pipeline_config["is_gpu"]:
                     images, gts = images.to(device=device), gts.to(device=device)
 
-                losses, metric_score = custom_trainer.feedforward(images=images, gts=gts)
+                losses, metric_score = custom_trainer.feedforward(
+                    images=images,
+                    gts=gts,
+                )
                 step_eval_metric_scores.append(metric_score)
                 step_eval_losses.append(losses.item())
 
                 if step % 10 == 0:
                     print(
                         f"\r\tEvaluating in step {step} with loss {statistics.mean(step_eval_losses):.5f} and metric score: {statistics.mean(step_eval_metric_scores):.5f}",
-                        end='',
-                        flush=True
+                        end="",
+                        flush=True,
                     )
             eval_losses: float = statistics.mean(step_eval_losses)
             eval_metric_scores: float = statistics.mean(step_eval_metric_scores)
             print(
                 f"\r\tCompleted evaluation at epoch {epoch} with loss {eval_losses:.5f} and metric score: {eval_metric_scores:.5f}",
-                flush=True
+                flush=True,
             )
 
         # Execute monitor
@@ -238,7 +247,7 @@ def run(*, pipeline_name: str, config_path: str):
             train_losses=train_losses,
             train_metric_scores=train_metric_scores,
             eval_losses=eval_losses,
-            eval_metric_scores=eval_metric_scores
+            eval_metric_scores=eval_metric_scores,
         )
     return {}
 
@@ -258,6 +267,9 @@ def run(*, pipeline_name: str, config_path: str):
         logging.info(f"[{pipeline_name}][run]: Running epoch: {epoch}/{n_epochs}...")
         open_manager.activate_train()
 
-        results: List[float] = open_manager.execute_train_per_epoch(epoch=epoch, verbose=True)
+        results: List[float] = open_manager.execute_train_per_epoch(
+            epoch=epoch,
+            verbose=True,
+        )
         train_losses.append(results[0])
         train_metric_scores.append(results[1])

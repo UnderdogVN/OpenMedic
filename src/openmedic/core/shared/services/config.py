@@ -1,13 +1,15 @@
-from typing import Dict
-import yaml
 import argparse
-from abc import ABC, abstractmethod
 import logging
+from abc import ABC, abstractmethod
+from typing import Dict
+
+import yaml
 
 
 class ConfigException(Exception):
     """Customs exception"""
-    def __init__(self, message: str="An error occurred in ConfigReader"):
+
+    def __init__(self, message: str = "An error occurred in ConfigReader"):
         self.message: str = message
         super().__init__(self.message)
 
@@ -15,7 +17,7 @@ class ConfigException(Exception):
 class ConfigReader:
     @classmethod
     def _init(cls, sections: Dict[str, dict]):
-        for section,  content in sections.items():
+        for section, content in sections.items():
             setattr(cls, section, content)
 
     @classmethod
@@ -26,13 +28,11 @@ class ConfigReader:
         ------
             config_path: str - The configure path.
         """
-        if not config_path.endswith(".yml") and \
-            not config_path.endswith(".yaml"):
+        if not config_path.endswith(".yml") and not config_path.endswith(".yaml"):
             raise ConfigException("Only support `yaml` or `yml` file.")
 
-        with open(config_path, 'r') as stream:
+        with open(config_path, "r") as stream:
             cls._init(sections=yaml.safe_load(stream))
-
 
     @classmethod
     def _check_required_field(cls, name: str, attr_fields: list):
@@ -49,7 +49,7 @@ class ConfigReader:
             "loss_function": ["name", "params", "type"],
             "optimization": ["name", "params"],
             "metric": ["name", "params"],
-            "pipeline": ["batch_size", "n_epochs", "train_ratio"]
+            "pipeline": ["batch_size", "n_epochs", "train_ratio"],
         }
         required_fields: list = REQUIRED_FIELD_MAPPING.get(name, [])
 
@@ -77,11 +77,11 @@ class ConfigReader:
             "loss_function",
             "pipeline",
             "metric",
-            "monitor"
+            "monitor",
         ]
-        error_msg: str = ''
+        error_msg: str = ""
         try:
-            attr: any =  getattr(cls, name)
+            attr: any = getattr(cls, name)
             if name in VERIFIABLE_FIELD:
                 if not isinstance(attr, dict):
                     error_msg = f"The field `{name}` need to be parsed as a dictionary."
@@ -94,7 +94,9 @@ class ConfigReader:
         except AttributeError:
             if name in ["transform", "monitor"]:
                 # Return None if config file does not include `transform` or `monitor` field
-                logging.warning(f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.")
+                logging.warning(
+                    f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.",
+                )
                 return None
             error_msg = f"The field `{name}` does not exist in the config file."
             raise ConfigException(message=error_msg)

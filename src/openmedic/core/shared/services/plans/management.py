@@ -1,28 +1,31 @@
-from typing import List, Union, Optional
 import argparse
+import logging
+import statistics
 from abc import ABC, abstractmethod
+from typing import List, Optional, Union
+
 import torch
 import torch.optim as optim
-import logging
 from torch.utils.data import DataLoader, random_split
-import statistics
 
 import openmedic.core.shared.services.utils as utils
 from openmedic.core.shared.services.config import ConfigReader
-from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
+from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
 
 
 class OpenMedicExeception(Exception):
     """Custom exception"""
-    def __init__(self, message: str="An error occurred"):
+
+    def __init__(self, message: str = "An error occurred"):
         self.message: str = message
         super().__init__(self.message)
 
 
 class OpenMedicPipelineBase(ABC):
     """The abstract class for all OpenMedic pipelines."""
+
     @abstractmethod
     def init_arguments():
         pass
@@ -43,7 +46,7 @@ class OpenMedicPipeline:
         pipeline: OpenMedicPipelineBase = utils.import_module(
             module_name=cls.MODULE_TEMPLATE.format(
                 pipeline_name=pipeline_name,
-            )
+            ),
         )
         parser = pipeline.init_arguments()
         args, _ = parser.parse_known_args()
@@ -64,7 +67,9 @@ class OpenMedicPipeline:
         n_epochs: int = pipeline_info["n_epochs"]
         train_ratio: float = pipeline_info["train_ratio"]
         if train_ratio > 1.0:
-            OpenMedicExeception(f"[OpenMedicManager][_populate_objects]: train_ratio need to lower than 1.0")
+            OpenMedicExeception(
+                f"[OpenMedicManager][_populate_objects]: train_ratio need to lower than 1.0",
+            )
 
         # Optional fields
         seed: int = pipeline_info.get("seed", 1)
@@ -79,11 +84,11 @@ class OpenMedicPipeline:
             "is_shuffle": is_shuffle,
             "num_workers": num_workers,
             "seed": seed,
-            "is_gpu": is_gpu
+            "is_gpu": is_gpu,
         }
 
     @classmethod
-    def get_pipeline_info(cls, mode: Optional[str]=None) -> dict:
+    def get_pipeline_info(cls, mode: Optional[str] = None) -> dict:
         pipline_info: dict = cls._get_all_pipeline_info()
         if not mode:
             return pipline_info
@@ -91,7 +96,9 @@ class OpenMedicPipeline:
         method_name = f"_get_{mode}_pipeline_info"
         method: any = getattr(cls, method_name, None)
         if not method:
-            raise OpenMedicExeception(f"[OpenMedicPipeline][get_pipeline_config]: No method found `{method_name}`")
+            raise OpenMedicExeception(
+                f"[OpenMedicPipeline][get_pipeline_config]: No method found `{method_name}`",
+            )
         return method(pipline_info=pipline_info)
 
 
@@ -104,18 +111,18 @@ class OpenMedicManager:
         """Gets OpenMedic objects for training pipeline."""
         return [
             OpenMedicDataset.initialize_with_config(),
-            OpenMedicTrainer.initialize_with_config()
+            OpenMedicTrainer.initialize_with_config(),
         ]
 
     @classmethod
     def _get_eval_objects(cls) -> any:
-        #TODO: Need to implement logics
+        # TODO: Need to implement logics
         """Gets OpenMedic objects for evaluation pipeline."""
         pass
 
     @classmethod
     def _get_inference_objects(cls) -> any:
-        #TODO: Need to implement logics
+        # TODO: Need to implement logics
         """Gets OpenMedic objects for inference pipeline."""
         pass
 
@@ -135,7 +142,9 @@ class OpenMedicManager:
         method_name = f"_get_{mode}_objects"
         method: any = getattr(cls, method_name, None)
         if not method:
-            raise OpenMedicExeception(f"[OpenMedicManager][_get_objects]: No method found `{method_name}`")
+            raise OpenMedicExeception(
+                f"[OpenMedicManager][_get_objects]: No method found `{method_name}`",
+            )
         return method()
 
     ### OBJECT METHODS ###
@@ -158,14 +167,18 @@ class OpenMedicManager:
         -------
             train_dataset, val_dataset: List[OpenMedicDataset] - List of OpenMedicDataset (train_dataset and val_dataset)
         """
-        generator: torch.Generator = torch.Generator().manual_seed(self.pipeline_info["seed"])
-        train_size: int= int(self.pipeline_info["train_ratio"] * len(self.open_dataset))
+        generator: torch.Generator = torch.Generator().manual_seed(
+            self.pipeline_info["seed"],
+        )
+        train_size: int = int(
+            self.pipeline_info["train_ratio"] * len(self.open_dataset),
+        )
         val_size: int = len(self.open_dataset) - train_size
 
         return random_split(
             dataset=self.open_dataset,
             lengths=[train_size, val_size],
-            generator=generator
+            generator=generator,
         )
 
     def _permute_batch_images(self, images: torch.Tensor) -> torch.Tensor:
@@ -175,12 +188,13 @@ class OpenMedicManager:
         ------
             images: torch.Tensor - Tensor of batch image with shape (B, H, W, C).
         """
-        return images \
-            .permute(0, 3, 1, 2) \
-            .float()
+        return images.permute(0, 3, 1, 2).float()
 
-
-    def _process_batch(self, images: torch.Tensor, gts: torch.Tensor) -> List[torch.Tensor]:
+    def _process_batch(
+        self,
+        images: torch.Tensor,
+        gts: torch.Tensor,
+    ) -> List[torch.Tensor]:
         """Process batch images (tensor).
 
         Input:
@@ -212,7 +226,9 @@ class OpenMedicManager:
         self.open_dataset, self.open_trainer = self._get_objects(mode="train")
         self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode="train")
         self.data_info = ConfigReader.get_field(name="data")
-        logging.info(f"[OpenMedicManager][plan_train]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}")
+        logging.info(
+            f"[OpenMedicManager][plan_train]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
+        )
 
         train_dataset: OpenMedicDataset
         val_dataset: OpenMedicDataset
@@ -221,17 +237,17 @@ class OpenMedicManager:
             dataset=train_dataset,
             batch_size=self.pipeline_info["batch_size"],
             shuffle=self.pipeline_info["is_shuffle"],
-            num_workers=self.pipeline_info["num_workers"]
+            num_workers=self.pipeline_info["num_workers"],
         )
         self.val_loader: DataLoader = DataLoader(
             dataset=val_dataset,
             batch_size=self.pipeline_info["batch_size"],
             shuffle=self.pipeline_info["is_shuffle"],
-            num_workers=self.pipeline_info["num_workers"]
+            num_workers=self.pipeline_info["num_workers"],
         )
 
         self.model, self.optimizer = self.open_trainer.get_object(
-            names=["model", "optimizer"]
+            names=["model", "optimizer"],
         )
         if self.pipeline_info["is_gpu"]:
             model = model.to(device=self.device)
@@ -244,7 +260,7 @@ class OpenMedicManager:
         """Activate evaluation mode."""
         self.open_model.eval()
 
-    def execute_train_per_epoch(self, epoch: int, verbose: bool=True) -> List[float]:
+    def execute_train_per_epoch(self, epoch: int, verbose: bool = True) -> List[float]:
         """Execute training process per epoch.
 
         Input:
@@ -296,16 +312,15 @@ class OpenMedicManager:
             if step % 10 == 0 and verbose:
                 print(
                     f"\r\tTraining in step {step} with loss {statistics.mean(step_train_losses):.5f} and metric score: {statistics.mean(step_train_metric_scores):.5f}",
-                    end='',
-                    flush=True
+                    end="",
+                    flush=True,
                 )
         train_loss_per_step: float = statistics.mean(step_train_losses)
-        train_metric_score_per_step: float = statistics.mean(step_train_metric_scores)\
-
+        train_metric_score_per_step: float = statistics.mean(step_train_metric_scores)
         if verbose:
             print(
                 f"\r\tCompleted trainning at epoch {epoch} with loss {train_loss_per_step:.5f} and metric score: {train_metric_score_per_step:.5f}",
-                flush=True
+                flush=True,
             )
 
         return train_loss_per_step, train_metric_score_per_step

@@ -1,5 +1,6 @@
-from typing import List
 from abc import ABC, abstractmethod
+from typing import List
+
 import numpy as np
 
 
@@ -23,7 +24,8 @@ class OpenMedicMonitorOpBase(ABC):
 
 class OpenMedicMonitorOpError(Exception):
     """Custom exception"""
-    def __init__(self, message: str=''):
+
+    def __init__(self, message: str = ""):
         self.message: str = message
         super().__init__(self.message)
 
@@ -38,9 +40,9 @@ class OpenMedicMonitor:
 
     @classmethod
     def get_op(cls, op_name: str) -> OpenMedicMonitorOpBase:
-        error_msg: str = ''
+        error_msg: str = ""
         try:
             return getattr(cls, op_name)
         except AttributeError:
-            error_msg=f"The {op_name} operation does not exist."
+            error_msg = f"The {op_name} operation does not exist."
             raise OpenMedicMonitorOpError(message=error_msg)
