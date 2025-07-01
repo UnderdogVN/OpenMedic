@@ -8,18 +8,27 @@ OpenMedic is an open-source Python framework designed to accelerate the developm
 Please follow the [instruction](https://docs.astral.sh/uv/getting-started/installation/) to install `uv`.
 
 Setup env:
-
-Initalizes python env with dependencies. Now OpenMedic just supports `python3.10`.
+- Set `__pycache__` location. We do not want `__pycache__` appears whenever we execute code.
 ```bash
-uv sync
+export PYTHONPYCACHEPREFIX=~/.cache/Python
 ```
 
-Installs `openmedic`:
+- Initalizes python env with dependencies. Now OpenMedic just supports `python3.10.18`.
+```bash
+uv venv --python 3.10.18
+```
+
+- Activates python env.
+```bash
+source .venv/bin/activate
+```
+
+- Installs `openmedic`:
 ```bash
 uv pip install -e .
 ```
 
-Test env:
+- Test env:
 ```bash
 openmedic --version
 ```
