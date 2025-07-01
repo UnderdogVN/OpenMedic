@@ -1,9 +1,5 @@
 from abc import ABC, abstractmethod
 
-import torch
-
-import openmedic.core.shared.services.utils as utils
-
 
 class OpenMedicMetricOpBase(ABC):
     @classmethod

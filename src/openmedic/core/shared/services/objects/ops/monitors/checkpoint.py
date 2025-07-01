@@ -7,7 +7,6 @@ import torch
 
 import openmedic.core.shared.services.plans.registry as registry
 import openmedic.core.shared.services.utils as utils
-from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
 from openmedic.core.shared.services.objects.monitor import (
     OpenMedicMonitorOpBase,

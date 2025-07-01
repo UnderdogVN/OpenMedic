@@ -24,3 +24,10 @@ repos:
       - id: isort
         profile: black
         python_version: 3.10.18
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.1
+    hooks:
+    - id: ruff-check
+      args: [ --fix ]
+    - id: ruff-format

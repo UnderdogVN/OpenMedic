@@ -250,7 +250,7 @@ class OpenMedicManager:
             names=["model", "optimizer"],
         )
         if self.pipeline_info["is_gpu"]:
-            model = model.to(device=self.device)
+            model = model.to(device=self.device)  # noqa: F841
 
     def activate_train(self):
         """Activate train mode."""

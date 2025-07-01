@@ -99,8 +99,8 @@ def _execute_monitor(monitor_info: dict):
         save_best: dict = checkpoint_info.get("save_best", {})
 
     if save_best:
-        target_on_dataset: str = save_best["on"]
-        target_score_type: str = save_best["target"]
+        target_on_dataset: str = save_best["on"]  # noqa: F841
+        target_score_type: str = save_best["target"]  # noqa: F841
 
     return
 
@@ -123,7 +123,7 @@ def run(*, pipeline_name: str, config_path: str):
     pipeline_info: dict = services.ConfigReader.get_field(name="pipeline")
     pipeline_config: dict = _get_pipeline_config(pipeline_info=pipeline_info)
     data_info: dict = services.ConfigReader.get_field(name="data")
-    monitor_info: dict = services.ConfigReader.get_field(name="monitor")
+    monitor_info: dict = services.ConfigReader.get_field(name="monitor")  # noqa: F841
     logging.info(
         f"[{pipeline_name}][run]: Target dataset with: \n\tImage Directory: {data_info['image_dir']}\n\tCOCO File: {data_info['coco_annotation_path']}",
     )
