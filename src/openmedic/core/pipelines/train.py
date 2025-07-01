@@ -1,11 +1,6 @@
-import argparse
 import logging
-from typing import List, Union, Dict
+from typing import Dict
 import warnings
-from torch.utils.data import DataLoader, random_split
-import torch
-import torch.optim as optim
-import statistics
 
 import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
@@ -39,7 +34,7 @@ def run(*, config_path: str):
         open_manager.activate_train()
         train_loss: float
         train_metric_score: float
-        train_loss, train_metric_score = open_manager.execute_train_per_epoch(epoch=epoch, verbose=True)
+        train_loss, train_metric_score = open_manager.execute_train_per_epoch(epoch=epoch)
         map_results["train_losses"].append(train_loss)
         map_results["train_metric_scores"].append(train_metric_score)
 
@@ -47,9 +42,12 @@ def run(*, config_path: str):
         open_manager.activate_eval()
         eval_loss: float
         eval_metric_score: float
-        eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch, verbose=True)
+        eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch)
         map_results["eval_losses"].append(eval_loss)
         map_results["eval_metric_scores"].append(eval_metric_score)
+
+        #TODO: Implement monitor logic
+
 
 
 

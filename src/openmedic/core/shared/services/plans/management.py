@@ -71,6 +71,7 @@ class OpenMedicPipeline:
         is_shuffle: bool = pipeline_info.get("is_shuffle", False)
         num_workers: int = pipeline_info.get("num_workers", 1)
         is_gpu: bool = pipeline_info.get("is_gpu", True)
+        verbose: bool = pipeline_info.get("verbose", True)
 
         return {
             "batch_size": batch_size,
@@ -79,7 +80,8 @@ class OpenMedicPipeline:
             "is_shuffle": is_shuffle,
             "num_workers": num_workers,
             "seed": seed,
-            "is_gpu": is_gpu
+            "is_gpu": is_gpu,
+            "verbose": verbose
         }
 
     @classmethod
@@ -244,14 +246,12 @@ class OpenMedicManager:
         """Activate evaluation mode."""
         self.open_model.eval()
 
-    def execute_train_per_epoch(self, epoch: int, verbose: bool=True) -> List[float]:
+    def execute_train_per_epoch(self, epoch: int) -> List[float]:
         """Execute training process per epoch.
 
         Input:
         ------
             epoch: int - The current epoch.
-            verbose: bool - Manifests the log if True.
-                By default is True.
 
         Output:
         -------
@@ -268,7 +268,7 @@ class OpenMedicManager:
                 open_manager.activate_train()
                 train_loss: float
                 train_metric_score: float
-                train_loss, train_metric_score = open_manager.execute_train_per_epoch(epoch=epoch, verbose=True)
+                train_loss, train_metric_score = open_manager.execute_train_per_epoch(epoch=epoch)
         ```
         """
         step: int
@@ -290,7 +290,7 @@ class OpenMedicManager:
             loss.backward()
             self.optimizer.step()
 
-            if step % 10 == 0 and verbose:
+            if step % 10 == 0 and self.pipeline_info["verbose"]:
                 print(
                     f"\r\tTraining in step {step} with loss {statistics.mean(train_losses):.5f} and metric score: {statistics.mean(train_metric_scores):.5f}",
                     end='',
@@ -299,7 +299,7 @@ class OpenMedicManager:
         train_loss_per_step: float = statistics.mean(train_losses)
         train_metric_score_per_step: float = statistics.mean(train_metric_scores)
 
-        if verbose:
+        if self.pipeline_info["verbose"]:
             print(
                 f"\r\tCompleted trainning at epoch {epoch} with loss {train_loss_per_step:.5f} and metric score: {train_metric_score_per_step:.5f}",
                 flush=True
@@ -313,14 +313,12 @@ class OpenMedicManager:
     def plan_eval(self, config_path: str):
         pass
 
-    def execute_eval_per_epoch(self, epoch: int, verbose: bool=True) -> List[float]:
-        """Execute training process per epoch.
+    def execute_eval_per_epoch(self, epoch: int) -> List[float]:
+        """Execute evaluation process per epoch.
 
         Input:
         ------
             epoch: int - The current epoch.
-            verbose: bool - Manifests the log if True.
-                By default is True.
 
         Output:
         -------
@@ -339,7 +337,7 @@ class OpenMedicManager:
                 open_manager.activate_eval()
                 eval_loss: float
                 eval_metric_score: float
-                eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch, verbose=True)
+                eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch)
         ```
         """
         step: int
@@ -359,7 +357,7 @@ class OpenMedicManager:
                 eval_metric_scores.append(metric_score)
                 eval_losses.append(loss.item())
 
-                if step % 10 == 0 and verbose:
+                if step % 10 == 0 and self.pipeline_info["verbose"]:
                     print(
                         f"\r\tEvaluating in step {step} with loss {statistics.mean(eval_losses):.5f} and metric score: {statistics.mean(eval_metric_scores):.5f}",
                         end='',
@@ -367,7 +365,7 @@ class OpenMedicManager:
                     )
             eval_loss_per_step: float = statistics.mean(eval_losses)
             eval_metric_score_per_step: float = statistics.mean(eval_metric_scores)
-            if verbose:
+            if self.pipeline_info["verbose"]:
                 print(
                     f"\r\tCompleted evaluation at epoch {epoch} with loss {eval_loss_per_step:.5f} and metric score: {eval_metric_score_per_step:.5f}",
                     flush=True
