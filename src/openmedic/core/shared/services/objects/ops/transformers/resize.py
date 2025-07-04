@@ -1,18 +1,22 @@
 from dataclasses import dataclass
 from typing import List, Optional
-import numpy as np
-import cv2
 
-from openmedic.core.shared.services.objects.transform import OpenMedicTransformOpBase, OpenMedicTransformOpError
+import cv2
+import numpy as np
+
 import openmedic.core.shared.services.plans.registry as registry
+from openmedic.core.shared.services.objects.transform import (
+    OpenMedicTransformOpBase,
+    OpenMedicTransformOpError,
+)
 
 
 @dataclass
 class Resize(OpenMedicTransformOpBase):
-    __LIMIT_SIZE: int=100
+    __LIMIT_SIZE: int = 100
     # Ground truth interpolation must to be fixed `INTER_NEAREST` to
     # keeps the generic pixel value of the labels
-    __GT_INTERPOLATION: int=cv2.INTER_NEAREST
+    __GT_INTERPOLATION: int = cv2.INTER_NEAREST
 
     def __init__(self, target_w: int, target_h: int, interpolation: str):
         self.target_w: int = target_w
@@ -27,10 +31,13 @@ class Resize(OpenMedicTransformOpBase):
         interpolation: Optional[str] = kwargs.get("interpolation", None)
 
         if not target_w or not target_h:
-            raise OpenMedicTransformOpError("`target_w` or `target_h` does not exist in cofig file.")
-        elif target_w < limit_size \
-            or target_h < limit_size:
-            raise OpenMedicTransformOpError(f"`target_w` or `target_h` needs to greater or equal than {limit_size}.")
+            raise OpenMedicTransformOpError(
+                "`target_w` or `target_h` does not exist in cofig file.",
+            )
+        elif target_w < limit_size or target_h < limit_size:
+            raise OpenMedicTransformOpError(
+                f"`target_w` or `target_h` needs to greater or equal than {limit_size}.",
+            )
 
         if not interpolation:
             # Set default interpolation.
@@ -45,13 +52,13 @@ class Resize(OpenMedicTransformOpBase):
         image_copy = cv2.resize(
             src=image_copy,
             dsize=(self.target_w, self.target_h),
-            interpolation=self.cv2_interpolation
+            interpolation=self.cv2_interpolation,
         )
 
         gt_copy = cv2.resize(
             src=gt_copy,
             dsize=(self.target_w, self.target_h),
-            interpolation=self.__GT_INTERPOLATION # with ground truth image we need apply `INTER_NEAREST`
+            interpolation=self.__GT_INTERPOLATION,  # with ground truth image we need apply `INTER_NEAREST`
         )
 
         return image_copy, gt_copy
@@ -59,4 +66,3 @@ class Resize(OpenMedicTransformOpBase):
 
 def init():
     registry.TransformRegister.register(transform_class=Resize)
-

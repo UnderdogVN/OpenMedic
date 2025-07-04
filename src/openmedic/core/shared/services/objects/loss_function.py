@@ -1,10 +1,7 @@
-import torch.nn as nn
 import torch
-
-from abc import ABC, abstractmethod
+import torch.nn as nn
 
 from openmedic.core.shared.services.config import ConfigReader
-import openmedic.core.shared.services.utils as utils
 
 
 class OpenMedicLossOpBase(nn.Module):
@@ -18,7 +15,8 @@ class OpenMedicLossOpBase(nn.Module):
 
 class OpenMedicLossOpError(Exception):
     """Custom exception"""
-    def __init__(self, message: str=''):
+
+    def __init__(self, message: str = ""):
         self.message: str = message
         super().__init__(self.message)
 
@@ -50,9 +48,9 @@ class OpenMedicLossFunction:
 
     @classmethod
     def get_op(cls, op_name: str) -> OpenMedicLossOpBase:
-        error_msg: str = ''
+        error_msg: str = ""
         try:
             return getattr(cls, op_name)
         except AttributeError:
-            error_msg=f"The {op_name} operation does not exist."
+            error_msg = f"The {op_name} operation does not exist."
             raise OpenMedicLossOpError(message=error_msg)

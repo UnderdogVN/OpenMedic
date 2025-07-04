@@ -1,7 +1,4 @@
-import torch
 from abc import ABC, abstractmethod
-
-import openmedic.core.shared.services.utils as utils
 
 
 class OpenMedicMetricOpBase(ABC):
@@ -20,7 +17,8 @@ class OpenMedicMetricOpBase(ABC):
 
 class OpenMedicOpError(Exception):
     """Custom exception"""
-    def __init__(self, message: str=''):
+
+    def __init__(self, message: str = ""):
         self.message: str = message
         super().__init__(self.message)
 
@@ -32,11 +30,9 @@ class OpenMedicMetric:
 
     @classmethod
     def get_op(cls, op_name: str) -> OpenMedicMetricOpBase:
-        error_msg: str = ''
+        error_msg: str = ""
         try:
             return getattr(cls, op_name)
         except AttributeError:
-            error_msg=f"The {op_name} operation does not exist."
+            error_msg = f"The {op_name} operation does not exist."
             raise OpenMedicOpError(message=error_msg)
-
-

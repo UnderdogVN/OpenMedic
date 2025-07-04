@@ -1,12 +1,13 @@
-import re
-from pycocotools.coco import COCO
-import io
-from contextlib import redirect_stdout
-from pycocotools import mask as maskUtils
-import numpy as np
-from typing import List
-import sys
 import importlib
+import io
+import re
+import sys
+from contextlib import redirect_stdout
+from typing import List
+
+import numpy as np
+from pycocotools import mask as maskUtils
+from pycocotools.coco import COCO
 
 
 class ModuleInterface:
@@ -29,8 +30,8 @@ def camel_to_snake(val: str) -> str:
     -------
         str - The snake_case value.
     """
-    s1: str = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', val)
-    return re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    s1: str = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", val)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def snake_to_camel(name: str) -> str:
@@ -45,8 +46,8 @@ def snake_to_camel(name: str) -> str:
     -------
         str - The CamelCase value.
     """
-    components: list = name.split('_')
-    return ''.join(x.capitalize() for x in components)
+    components: list = name.split("_")
+    return "".join(x.capitalize() for x in components)
 
 
 def load_coco_file(annotation_path: str) -> COCO:
@@ -97,12 +98,12 @@ def convert_to_gt(ann_ids: List[dict], img_h: int, img_w) -> np.ndarray:
     """
     gt_canvas: np.ndarray = np.zeros((img_h, img_w), dtype=np.uint8)
     for ann_id in ann_ids:
-        seg: any = ann_id['segmentation']
+        seg: any = ann_id["segmentation"]
         category_id: int = ann_id["category_id"]
         mask: np.ndarray
         if isinstance(seg, dict):  # RLE
-            if isinstance(seg['counts'], str):
-                seg['counts'] = seg['counts'].encode('utf-8')
+            if isinstance(seg["counts"], str):
+                seg["counts"] = seg["counts"].encode("utf-8")
             mask = maskUtils.decode(seg)
         else:  # Polygon
             rles = maskUtils.frPyObjects(seg, img_h, img_w)
@@ -131,6 +132,7 @@ def import_module(module_name: str) -> any:
     if sys.version_info.major >= 3 and sys.version_info.minor >= 10:
         # https://bobbyhadz.com/blog/python-importerror-cannot-import-name-mapping-from-collections
         import collections.abc
+
         collections.Mapping = collections.abc.Mapping
         collections.MutableMapping = collections.abc.MutableMapping
         return importlib.import_module(module_name)
@@ -138,6 +140,7 @@ def import_module(module_name: str) -> any:
 
 class BreakLoop(Exception):
     """Raises exception to break the loop."""
-    def __init__(self, message: str=''):
+
+    def __init__(self, message: str = ""):
         self.message: str = message
         super().__init__(self.message)

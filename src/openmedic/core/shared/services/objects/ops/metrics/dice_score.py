@@ -1,12 +1,19 @@
+from typing import Dict, Union
+
 import torch
-from typing import Union, Dict
 
 import openmedic.core.shared.services.objects.metric as metric
 import openmedic.core.shared.services.plans.registry as registry
 
 
 class DiceCoefficient(metric.OpenMedicMetricOpBase):
-    def __init__(self, n_classes: int, include_background: bool, epsilon: Union[float, str]=1e-5, is_detail: bool=True):
+    def __init__(
+        self,
+        n_classes: int,
+        include_background: bool,
+        epsilon: Union[float, str] = 1e-5,
+        is_detail: bool = True,
+    ):
         """
         Input:
         ------
@@ -37,20 +44,28 @@ class DiceCoefficient(metric.OpenMedicMetricOpBase):
         pred_classes: torch.Tensor = torch.argmax(gts_pred, dim=1)  # [B, H, W]
         dice_scores: list = []
 
-        class_range: range = range(self.n_classes) if self.include_background else range(1, self.n_classes)
+        class_range: range = (
+            range(self.n_classes)
+            if self.include_background
+            else range(1, self.n_classes)
+        )
 
         for cls in class_range:
             pred_cls: torch.Tensor = (pred_classes == cls).float()  # [B, H, W]
-            label_cls: torch.Tensor = (gts == cls).float()          # [B, H, W]
+            label_cls: torch.Tensor = (gts == cls).float()  # [B, H, W]
 
             # Skip this class if not present in the batch
             if label_cls.sum() == 0:
                 continue
 
             intersection: torch.Tensor = (pred_cls * label_cls).sum(dim=(1, 2))  # [B]
-            union: torch.Tensor = pred_cls.sum(dim=(1, 2)) + label_cls.sum(dim=(1, 2))  # [B]
+            union: torch.Tensor = pred_cls.sum(dim=(1, 2)) + label_cls.sum(
+                dim=(1, 2),
+            )  # [B]
 
-            dice: torch.Tensor = (2 * intersection + self.epsilon) / (union + self.epsilon)  # [B]
+            dice: torch.Tensor = (2 * intersection + self.epsilon) / (
+                union + self.epsilon
+            )  # [B]
             dice_scores.append(dice.mean())  # scalar
 
         if len(dice_scores) > 0:
