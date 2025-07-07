@@ -1,5 +1,4 @@
 import logging
-from typing import Dict
 import warnings
 import datetime
 
@@ -13,12 +12,13 @@ warnings.filterwarnings("ignore")
 
 ### MAIN PIPELINE ###
 @helper.montior
-def run(*, config_path: str):
+def run(*, config_path: str) -> dict:
     logging.info(f"[train][run]: Planning train pipeline...")
     services.ConfigReader.initialize(config_path=config_path)
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_train()
     now: datetime = plans.OpenMedicPipelineResult.current_time
+    ts: int = int(now.timestamp())
 
     logging.info(f"[train][run]: Executing train pipeline...")
     n_epochs: int = open_manager.pipeline_info["n_epochs"]
@@ -36,6 +36,10 @@ def run(*, config_path: str):
 
         # Monitor progress
         open_manager.monitor_per_epoch()
+
+    return {
+        "timestamp": ts
+    }
 
 
 

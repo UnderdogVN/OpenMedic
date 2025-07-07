@@ -311,15 +311,12 @@ class OpenMedicManager:
 
     def execute_train_per_epoch(self, epoch: int):
         """Execute training process per epoch.
+        --> Update `train_losses` and `train_metric_scores` to OpenMedicPipelineResult
 
         Input:
         ------
             epoch: int - The current epoch.
 
-        Output:
-        -------
-            train_loss_per_step, train_metric_score_per_step: List[float].
-                The loss and metric score per step.
         Usage:
         ------
         ```
@@ -373,6 +370,9 @@ class OpenMedicManager:
         OpenMedicPipelineResult.update(attr_name="train_metric_scores", val=train_metric_score_per_step)
 
     def monitor_per_epoch(self, **kwargs):
+        """Execute monitor process per epoch.
+        Update latest state `open_model` to OpenMedicPipelineResult.
+        """
         # Updated to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="open_model", val=self.open_model)
         self.open_trainer.execute_monitor(**kwargs)
@@ -382,15 +382,12 @@ class OpenMedicManager:
 
     def execute_eval_per_epoch(self, epoch: int):
         """Execute evaluation process per epoch.
+        --> Update `eval_losses` and `eval_metric_scores` to OpenMedicPipelineResult
 
         Input:
         ------
             epoch: int - The current epoch.
 
-        Output:
-        -------
-            train_loss_per_step, train_metric_score_per_step: List[float].
-                The loss and metric score per step.
         Usage:
         ------
         ```
