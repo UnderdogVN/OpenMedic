@@ -4,9 +4,13 @@ import io
 from contextlib import redirect_stdout
 from pycocotools import mask as maskUtils
 import numpy as np
+import datetime
 from typing import List
 import sys
 import importlib
+import os
+import yaml
+import json
 
 
 class ModuleInterface:
@@ -141,3 +145,33 @@ class BreakLoop(Exception):
     def __init__(self, message: str=''):
         self.message: str = message
         super().__init__(self.message)
+
+
+def get_current_time() -> datetime.datetime:
+    return datetime.datetime.now()
+
+
+def save_as_yml(data: dict, file_path: str, if_exist: str="append"):
+    mode: str = 'w'
+    if os.path.isfile(file_path) and if_exist == "append":
+        mode = 'a'
+
+    if not file_path.endswith(".yml") \
+        and not file_path.endswith(".yaml"):
+        raise Exception(f"Only support with file format `.yml` or `.yaml`.")
+
+    with open(file_path, mode) as file:
+        if mode == 'a':
+            file.write("\n---\n")  # YAML document separator
+        yaml.dump(data, file)
+
+
+def save_as_json(data: dict, file_path: str, if_exist: str=''):
+    if not file_path.endswith(".json"):
+        raise Exception(f"[save_as_json]: Only support with file format `.json`.")
+
+    if os.path.isfile(file_path) and not if_exist:
+        raise Exception(f"[save_as_json]: The file `file_path` ({file_path}) is exist! Need to set `if_exist` = 'overwrite'.")
+
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4) # indent=4 makes the JSON file pretty and readable (indented by 4 spaces).

@@ -1,6 +1,7 @@
 import logging
 from typing import Dict
 import warnings
+import datetime
 
 import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
@@ -17,36 +18,24 @@ def run(*, config_path: str):
     services.ConfigReader.initialize(config_path=config_path)
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_train()
+    now: datetime = plans.OpenMedicPipelineResult.current_time
 
     logging.info(f"[train][run]: Executing train pipeline...")
     n_epochs: int = open_manager.pipeline_info["n_epochs"]
-
-    map_results: Dict[str, list]  = {
-        "train_losses": [],
-        "train_metric_scores": [],
-        "eval_losses": [],
-        "eval_metric_scores": []
-    }
+    # breakpoint()
     for epoch in range(1, n_epochs + 1):
         logging.info(f"[train][run]: Running epoch: {epoch}/{n_epochs}...")
 
         # Training progress
         open_manager.activate_train()
-        train_loss: float
-        train_metric_score: float
-        train_loss, train_metric_score = open_manager.execute_train_per_epoch(epoch=epoch)
-        map_results["train_losses"].append(train_loss)
-        map_results["train_metric_scores"].append(train_metric_score)
+        open_manager.execute_train_per_epoch(epoch=epoch)
 
         # Evaluation progress
         open_manager.activate_eval()
-        eval_loss: float
-        eval_metric_score: float
-        eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch)
-        map_results["eval_losses"].append(eval_loss)
-        map_results["eval_metric_scores"].append(eval_metric_score)
+        open_manager.execute_eval_per_epoch(epoch=epoch)
 
-        #TODO: Implement monitor logic
+        # Monitor progress
+        open_manager.monitor_per_epoch()
 
 
 

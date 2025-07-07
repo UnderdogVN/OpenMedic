@@ -6,6 +6,8 @@ import torch.optim as optim
 import logging
 from torch.utils.data import DataLoader, random_split
 import statistics
+import os
+import datetime
 
 import openmedic.core.shared.services.utils as utils
 from openmedic.core.shared.services.config import ConfigReader
@@ -33,26 +35,7 @@ class OpenMedicPipelineBase(ABC):
 
 
 class OpenMedicPipeline:
-    # MODULE_TEMPLATE: str = "openmedic.core.pipelines.{pipeline_name}"
-
-    # @classmethod
-    # def execute(cls, pipeline_name: str) -> dict:
-    #     """The abstract method for all pipelines in `openmedic.core.pipelines`."""
-    #     args: argparse.Namespace
-    #     parser: argparse.ArgumentParser
-    #     pipeline: OpenMedicPipelineBase = utils.import_module(
-    #         module_name=cls.MODULE_TEMPLATE.format(
-    #             pipeline_name=pipeline_name,
-    #         )
-    #     )
-    #     parser = pipeline.init_arguments()
-    #     args, _ = parser.parse_known_args()
-    #     kwargs = {
-    #         attr: getattr(args, attr) for attr in dir(args) if not attr.startswith("_")
-    #     }
-    #     kwargs["pipeline_name"] = pipeline_name
-    #     return pipeline.run(**kwargs)
-
+    """OpenMedicPipeline manage to read and populate information for train/eval/inference pipeline."""
     @classmethod
     def _get_all_pipeline_info(cls) -> dict:
         return ConfigReader.get_field(name="pipeline")
@@ -95,6 +78,85 @@ class OpenMedicPipeline:
         if not method:
             raise OpenMedicExeception(f"[OpenMedicPipeline][get_pipeline_config]: No method found `{method_name}`")
         return method(pipeline_info=pipeline_info)
+
+
+class OpenMedicPipelineResult:
+    """OpenMedicPipelineResult manages all the results (loss, metrics, ...) and informations when running pipelines."""
+    train_losses: List[float] = []
+    train_metric_scores: List[float] = []
+    eval_losses: List[float] = []
+    eval_metric_scores: List[float] = []
+    metadata: dict = {}
+    current_time: datetime = utils.get_current_time()
+    prefix_exp: str = "experiment"
+    open_model: Optional[OpenMedicModelBase] = None
+
+    @classmethod
+    def get_result(cls, attr_name: str) -> any:
+        return getattr(cls, attr_name, None)
+
+    @classmethod
+    def update(cls, attr_name: str, val: any):
+        attr: any = getattr(cls, attr_name, None)
+        try:
+            if isinstance(attr, list):
+                attr.append(val)
+            elif isinstance(attr, dict):
+                print("yes")
+                attr.update(val)
+            else:
+                setattr(cls, attr_name, val)
+        except Exception as e:
+            raise OpenMedicExeception(f"[OpenMedicPipelineResult][update]: {e}")
+
+
+    @classmethod
+    def init_metadata(cls, mode: str):
+        method_name = f"_init_{mode}_metadata"
+        method: any = getattr(cls, method_name, None)
+        assert method is not None, f"The method ({method_name}) does not exist."
+        cls.metadata = method()
+
+    @classmethod
+    def get_metadata(cls) -> dict:
+        return cls.metadata
+
+    @classmethod
+    def get_model(cls) -> Optional[OpenMedicModelBase]:
+        return cls.open_model
+
+    @classmethod
+    def _init_train_metadata(cls) -> dict:
+        # Get all informations
+        return {
+            "data": ConfigReader.get_field(name="data"),
+            "transform": ConfigReader.get_field(name="transform"),
+            "model": ConfigReader.get_field(name="model"),
+            "pipeline": ConfigReader.get_field(name="pipeline"),
+            "optimization": ConfigReader.get_field(name="optimization"),
+            "loss_function": ConfigReader.get_field(name="loss_function"),
+            "metric": ConfigReader.get_field(name="metric"),
+        }
+
+    @classmethod
+    def get_scores(cls) -> dict:
+        return {
+            "train_losses": cls.train_losses,
+            "train_metric_scores": cls.train_metric_scores,
+            "eval_losses": cls.eval_losses,
+            "eval_metric_scores": cls.eval_metric_scores,
+        }
+
+    @classmethod
+    def get_current_experiment(cls) -> str:
+        if not cls.current_time:
+            raise OpenMedicExeception("`current_time` is note initalized.")
+        return f'{cls.prefix_exp}_{cls.current_time.strftime("%Y%m%d.%H%M%S")}'
+
+
+class OpenMedicOSEnv:
+    """OpenMedicOSEnv manages all OS envs"""
+    home: str = os.path.join(os.environ.get("OPENMEDIC_HOME", os.getcwd()), ".openmedic")
 
 
 class OpenMedicManager:
@@ -181,7 +243,6 @@ class OpenMedicManager:
             .permute(0, 3, 1, 2) \
             .float()
 
-
     def _process_batch(self, images: torch.Tensor, gts: torch.Tensor) -> List[torch.Tensor]:
         """Process batch images (tensor).
 
@@ -238,6 +299,8 @@ class OpenMedicManager:
         if self.pipeline_info["is_gpu"]:
             self.open_model = self.open_model.to(device=self.device)
 
+        OpenMedicPipelineResult.init_metadata(mode="train")
+
     def activate_train(self):
         """Activate train mode."""
         self.open_model.train()
@@ -246,7 +309,7 @@ class OpenMedicManager:
         """Activate evaluation mode."""
         self.open_model.eval()
 
-    def execute_train_per_epoch(self, epoch: int) -> List[float]:
+    def execute_train_per_epoch(self, epoch: int):
         """Execute training process per epoch.
 
         Input:
@@ -305,15 +368,19 @@ class OpenMedicManager:
                 flush=True
             )
 
-        return train_loss_per_step, train_metric_score_per_step
+        # Update to OpenMedicPipelineResult
+        OpenMedicPipelineResult.update(attr_name="train_losses", val=train_loss_per_step)
+        OpenMedicPipelineResult.update(attr_name="train_metric_scores", val=train_metric_score_per_step)
 
-    def monitor_per_epoch():
-        pass
+    def monitor_per_epoch(self, **kwargs):
+        # Updated to OpenMedicPipelineResult
+        OpenMedicPipelineResult.update(attr_name="open_model", val=self.open_model)
+        self.open_trainer.execute_monitor(**kwargs)
 
     def plan_eval(self, config_path: str):
         pass
 
-    def execute_eval_per_epoch(self, epoch: int) -> List[float]:
+    def execute_eval_per_epoch(self, epoch: int):
         """Execute evaluation process per epoch.
 
         Input:
@@ -371,6 +438,7 @@ class OpenMedicManager:
                     flush=True
                 )
 
-        return eval_loss_per_step, eval_metric_score_per_step
-
+        # Update to OpenMedicPipelineResult
+        OpenMedicPipelineResult.update(attr_name="eval_losses", val=eval_loss_per_step)
+        OpenMedicPipelineResult.update(attr_name="eval_metric_scores", val=eval_metric_score_per_step)
 

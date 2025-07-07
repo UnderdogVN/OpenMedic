@@ -39,7 +39,6 @@ class OpenMedicTrainer:
         loss_function: nn.modules = cls._get_loss_function(loss_info=loss_info)
         metric_op: metric.OpenMedicMetricOpBase = cls._get_metric(metric_info=metric_info)
         monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase] = cls._get_monitor_map_ops(monitor_info=monitor_info)
-
         return cls(model, optimizer, loss_function, metric_op, monitor_map_ops)
 
     @classmethod
@@ -56,10 +55,11 @@ class OpenMedicTrainer:
         """
         model_name: str = model_info["name"]
         model_params: dict = model_info["params"]
-        transfer_learning_model: str = model_info.get("transfer_learning_model", '')
+        model_checkpoint: str = model_info.get("model_checkpoint", '')
         model: OpenMedicModelBase = OpenMedicModel.get_model(model_name=model_name)(**model_params)
-        if transfer_learning_model:
-            model.load_state_dict(torch.load(transfer_learning_model))
+        if model_checkpoint:
+            # TODO: Check related or absolute path
+            model.load_state_dict(torch.load(model_checkpoint))
 
         return model
 
@@ -154,7 +154,8 @@ class OpenMedicTrainer:
         return metric.OpenMedicMetric.get_op(op_name=metric_name)(**metric_params)
 
     ### OBJECT METHODS ###
-    def __init__(self,
+    def __init__(
+        self,
         model: OpenMedicModelBase,
         optimizer: optim.Optimizer,
         loss_function: nn.Module,
@@ -176,6 +177,9 @@ class OpenMedicTrainer:
         self.loss_function: nn.Module = loss_function
         self.metric_op: metric.OpenMedicMetricOpBase = metric_op
         self.monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase] = monitor_map_ops
+
+    def get_model(self) -> OpenMedicModelBase:
+        return self.model
 
     def feedforward(self, images: torch.Tensor, gts: torch.Tensor) -> list:
         """Executes feed forward process.
@@ -206,21 +210,7 @@ class OpenMedicTrainer:
 
         checkpoint_handler.execute(**kwargs)
 
-    def _monitor_kwargs_for_execution(self, **kwargs) -> dict:
-        return {
-            # kwargs for `CheckPoint`
-            "model": self.model,
-        }
-
     def execute_monitor(self, **kwargs):
-        kwargs.update(
-            self._monitor_kwargs_for_execution(**kwargs)
-        )
-
-        monitor_info: Optional[dict] = ConfigReader.get_field(name="monitor")
-        if not monitor_info:
-            return
-
         for monitor_op in self.monitor_map_ops.values():
             monitor_op.execute(**kwargs)
 
