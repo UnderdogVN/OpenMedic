@@ -3,6 +3,7 @@ import functools
 import logging
 import time
 import torch, gc
+import datetime
 
 import openmedic.core.shared.services.utils as utils
 
@@ -41,7 +42,6 @@ def montior(input_function):
             stop: float = time.perf_counter()
             duration: float = round(stop - start, 3)
             if isinstance(result, dict):
-                return_value["runner"] = result["runner"]
                 return_value["timestamp"] = result["timestamp"]
             elif result:
                 return_value["result"] = result
