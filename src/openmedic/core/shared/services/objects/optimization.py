@@ -1,5 +1,5 @@
-import torch.optim as optim
 import torch.nn as nn
+import torch.optim as optim
 
 
 class OpenMedicOptimizerOpBase(nn.Module):
@@ -13,7 +13,8 @@ class OpenMedicOptimizerOpBase(nn.Module):
 
 class OpenMedicOptimizerOpError(Exception):
     """Custom exception"""
-    def __init__(self, message: str=''):
+
+    def __init__(self, message: str = ""):
         self.message: str = message
         super().__init__(self.message)
 
@@ -21,9 +22,9 @@ class OpenMedicOptimizerOpError(Exception):
 class OpenMedicOptimizer:
     @staticmethod
     def get_torch_optimization(name: str, **kwargs) -> optim.Optimizer:
-        error_msg: str = ''
+        error_msg: str = ""
         try:
             return getattr(optim, name)(**kwargs)
         except AttributeError:
-            error_msg=f"The {name} operation does not exist."
+            error_msg = f"The {name} operation does not exist."
             raise OpenMedicOptimizerOpError(message=error_msg)

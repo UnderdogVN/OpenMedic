@@ -9,14 +9,49 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "pycocotools>=2.0.8",
     "pyyaml>=6.0.2",
-    "torch>=2.2.2",
-    "torchvision>=0.17.2"
+    "torch==2.2.2",
+    "torchvision==0.17.2"
 ]
-
 
 [project.scripts]
 openmedic = "openmedic.cli.cli_management:cli"
 
-
 [tool.setuptools.dynamic]
 version = {attr = "openmedic.__version__"}
+
+[tool.black]
+line-length = 88
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
+
+[tool.isort]
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.ruff.lint]
+select = [
+    "F401",  # Unused import
+    "F405",  # Name may be undefined, or defined from star imports
+    "F841",  # Local variable is assigned to but never used
+]
+fixable = ["ALL"]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

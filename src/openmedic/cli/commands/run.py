@@ -1,9 +1,12 @@
-import click
 import logging
+
+import click
+
 logging.basicConfig(level=logging.INFO)
 
-from openmedic.cli.cli_management import cli
 import openmedic.core.shared.services as services
+from openmedic.cli.cli_management import cli
+
 
 @cli.command()
 @click.option("--pipeline", required=True, help="Pipeline to run")
