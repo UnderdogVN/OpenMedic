@@ -5,5 +5,3 @@ import click
 def cli():
     """Main command group for `open-medic`."""
     pass
-
-

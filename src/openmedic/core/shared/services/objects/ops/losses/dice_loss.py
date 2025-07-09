@@ -1,12 +1,12 @@
-import torch.nn.functional as F
 import torch
+import torch.nn.functional as F
 
-import openmedic.core.shared.services.plans.registry as registry
 import openmedic.core.shared.services.objects.loss_function as lf
+import openmedic.core.shared.services.plans.registry as registry
 
 
 class MultiClassDiceLoss(lf.OpenMedicLossOpBase):
-    def __init__(self, n_classes: int, smooth=1.0, include_background: bool=False):
+    def __init__(self, n_classes: int, smooth=1.0, include_background: bool = False):
         super().__init__()
         self.n_classes: int = n_classes
         self.smooth: float = smooth
@@ -19,8 +19,12 @@ class MultiClassDiceLoss(lf.OpenMedicLossOpBase):
         """
         gts_pred_shapes: tuple = gts_pred.shape
         gts_shapes: tuple = gts.shape
-        assert len(gts_pred_shapes) == 4, f"`gts_pred.shape` expect to 4 but return {len(gts_pred_shapes)}"
-        assert len(gts_shapes) == 3, f"`gts_shapes.shape` expect to 3 but return {len(gts_shapes)}"
+        assert (
+            len(gts_pred_shapes) == 4
+        ), f"`gts_pred.shape` expect to 4 but return {len(gts_pred_shapes)}"
+        assert (
+            len(gts_shapes) == 3
+        ), f"`gts_shapes.shape` expect to 3 but return {len(gts_shapes)}"
 
         # valid_mask: exclude ignore_index (e.g., 255)
         valid_mask: torch.Tensor
@@ -34,7 +38,11 @@ class MultiClassDiceLoss(lf.OpenMedicLossOpBase):
         safe_targets[~valid_mask] = 0  # won't matter; masked out later
 
         # One-hot encode: [B, H, W] → [B, H, W, C] → [B, C, H, W]
-        one_hot: torch.Tensor = F.one_hot(safe_targets, num_classes=self.n_classes).permute(0, 3, 1, 2).float()
+        one_hot: torch.Tensor = (
+            F.one_hot(safe_targets, num_classes=self.n_classes)
+            .permute(0, 3, 1, 2)
+            .float()
+        )
 
         # Compute softmax probabilities
         probs: torch.Tensor = F.softmax(gts_pred, dim=1)
@@ -48,7 +56,9 @@ class MultiClassDiceLoss(lf.OpenMedicLossOpBase):
         dims: tuple = (0, 2, 3)
         intersection: torch.Tensor = (probs * one_hot).sum(dim=dims)
         cardinality: torch.tensor = probs.sum(dim=dims) + one_hot.sum(dim=dims)
-        dice: torch.Tensor = (2. * intersection + self.smooth) / (cardinality + self.smooth)
+        dice: torch.Tensor = (2.0 * intersection + self.smooth) / (
+            cardinality + self.smooth
+        )
 
         return 1 - dice.mean()
 

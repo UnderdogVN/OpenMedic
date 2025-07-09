@@ -1,9 +1,10 @@
-import re
 import functools
+import gc
 import logging
+import re
 import time
-import torch, gc
-import datetime
+
+import torch
 
 import openmedic.core.shared.services.utils as utils
 
@@ -12,8 +13,8 @@ def camel_to_snake(name: str) -> str:
     """Converts CamelCase or camelCase to snake_case.
     Example: 'CamelCase' -> 'camel_case'
     """
-    s1 = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', name)
-    snake_case = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+    snake_case = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
     return snake_case
 
 
@@ -31,10 +32,11 @@ def montior(input_function):
             pass
     ```
     """
+
     @functools.wraps(input_function)
     def try_cath_wrapper(*args, **kwargs):
         status: str = "success"
-        error_msg: str = ''
+        error_msg: str = ""
         return_value: dict = {}
         try:
             start: float = time.perf_counter()
@@ -47,7 +49,7 @@ def montior(input_function):
                 return_value["result"] = result
 
             logging.info(
-                f"[{montior.__name__}]: Completed progress with duration: {duration}s."
+                f"[{montior.__name__}]: Completed progress with duration: {duration}s.",
             )
             return_value["duration"] = duration
         except Exception as e:

@@ -1,6 +1,6 @@
+import datetime
 import logging
 import warnings
-import datetime
 
 import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
@@ -38,9 +38,5 @@ def run(*, config_path: str) -> dict:
         open_manager.monitor_per_epoch()
 
     return {
-        "timestamp": ts
+        "timestamp": ts,
     }
-
-
-
-

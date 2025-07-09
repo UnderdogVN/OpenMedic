@@ -1,20 +1,25 @@
-import torch
-import torch.optim as optim
-import torch.nn as nn
-from typing import List, Optional, Dict
 import logging
+from typing import Dict, List, Optional
 
-from openmedic.core.shared.services.config import ConfigReader
-from openmedic.core.shared.services.objects.model import OpenMedicModelBase, OpenMedicModel
-import openmedic.core.shared.services.objects.metric as metric
-import openmedic.core.shared.services.objects.optimization as optimization
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
 import openmedic.core.shared.services.objects.loss_function as lf
+import openmedic.core.shared.services.objects.metric as metric
 import openmedic.core.shared.services.objects.monitor as mt
+import openmedic.core.shared.services.objects.optimization as optimization
+from openmedic.core.shared.services.config import ConfigReader
+from openmedic.core.shared.services.objects.model import (
+    OpenMedicModel,
+    OpenMedicModelBase,
+)
 
 
 class OpenMedicTrainerException(Exception):
     """Customizes exception"""
-    def __init__(self, message: str="An error occurred in OpenMedicTrainerException"):
+
+    def __init__(self, message: str = "An error occurred in OpenMedicTrainerException"):
         self.message: str = message
         super().__init__(self.message)
 
@@ -35,10 +40,17 @@ class OpenMedicTrainer:
         monitor_info: Optional[dict] = ConfigReader.get_field(name="monitor")
 
         model: OpenMedicModelBase = cls._get_model(model_info=model_info)
-        optimizer: optim.Optimizer = cls._get_optimizer(model=model, optim_info=optim_info)
+        optimizer: optim.Optimizer = cls._get_optimizer(
+            model=model,
+            optim_info=optim_info,
+        )
         loss_function: nn.modules = cls._get_loss_function(loss_info=loss_info)
-        metric_op: metric.OpenMedicMetricOpBase = cls._get_metric(metric_info=metric_info)
-        monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase] = cls._get_monitor_map_ops(monitor_info=monitor_info)
+        metric_op: metric.OpenMedicMetricOpBase = cls._get_metric(
+            metric_info=metric_info,
+        )
+        monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase] = (
+            cls._get_monitor_map_ops(monitor_info=monitor_info)
+        )
         return cls(model, optimizer, loss_function, metric_op, monitor_map_ops)
 
     @classmethod
@@ -55,8 +67,10 @@ class OpenMedicTrainer:
         """
         model_name: str = model_info["name"]
         model_params: dict = model_info["params"]
-        model_checkpoint: str = model_info.get("model_checkpoint", '')
-        model: OpenMedicModelBase = OpenMedicModel.get_model(model_name=model_name)(**model_params)
+        model_checkpoint: str = model_info.get("model_checkpoint", "")
+        model: OpenMedicModelBase = OpenMedicModel.get_model(model_name=model_name)(
+            **model_params,
+        )
         if model_checkpoint:
             # TODO: Check related or absolute path
             model.load_state_dict(torch.load(model_checkpoint))
@@ -64,7 +78,11 @@ class OpenMedicTrainer:
         return model
 
     @classmethod
-    def _get_optimizer(cls, model: OpenMedicModelBase, optim_info: dict) -> optim.Optimizer:
+    def _get_optimizer(
+        cls,
+        model: OpenMedicModelBase,
+        optim_info: dict,
+    ) -> optim.Optimizer:
         """Gets Torch Optimizer
         TODO: Need to implement to logic get custom Optimizer.
 
@@ -80,10 +98,13 @@ class OpenMedicTrainer:
         optim_name: str = optim_info["name"]
         optim_params: str = optim_info["params"]
         params: dict = {
-            "params": model.parameters()
+            "params": model.parameters(),
         }
         params.update(optim_params)
-        return optimization.OpenMedicOptimizer.get_torch_optimization(name=optim_name, **params)
+        return optimization.OpenMedicOptimizer.get_torch_optimization(
+            name=optim_name,
+            **params,
+        )
 
     @classmethod
     def _get_loss_function(cls, loss_info: dict) -> nn.Module:
@@ -100,15 +121,26 @@ class OpenMedicTrainer:
         loss_name: str = loss_info["name"]
         loss_params: dict = loss_info["params"]
         loss_type: str = loss_info["type"]
-        if loss_type =="torch":
-            return lf.OpenMedicLossFunction.get_torch_loss_function(name=loss_name, **loss_params)
-        elif loss_type=="custom":
-            return lf.OpenMedicLossFunction.get_custom_loss_function(name=loss_name, **loss_params)
+        if loss_type == "torch":
+            return lf.OpenMedicLossFunction.get_torch_loss_function(
+                name=loss_name,
+                **loss_params,
+            )
+        elif loss_type == "custom":
+            return lf.OpenMedicLossFunction.get_custom_loss_function(
+                name=loss_name,
+                **loss_params,
+            )
         else:
-            raise OpenMedicTrainerException(f"`loss_type` ({loss_type}) is not support.")
+            raise OpenMedicTrainerException(
+                f"`loss_type` ({loss_type}) is not support.",
+            )
 
     @classmethod
-    def _get_monitor_map_ops(cls, monitor_info: Optional[dict]) -> Dict[str, mt.OpenMedicMonitorOpBase]:
+    def _get_monitor_map_ops(
+        cls,
+        monitor_info: Optional[dict],
+    ) -> Dict[str, mt.OpenMedicMonitorOpBase]:
         """Gets the monitor operators
 
         Input:
@@ -120,18 +152,24 @@ class OpenMedicTrainer:
             Dict[str, mt.OpenMedicMonitorOpBase] - The dictionary of monitor operators.
         """
         if not monitor_info:
-            logging.warning(f"[{cls.__name__}][_get_monitor_manager]: You did not configure `monitor`")
+            logging.warning(
+                f"[{cls.__name__}][_get_monitor_manager]: You did not configure `monitor`",
+            )
             return {}
 
         monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase] = {}
         for op_name, params in monitor_info.items():
             if not isinstance(params, dict):
-                raise OpenMedicTrainerException(f"The `{op_name}` expects its parameters as dictionay.")
+                raise OpenMedicTrainerException(
+                    f"The `{op_name}` expects its parameters as dictionay.",
+                )
 
             monitor_map_ops.update(
                 {
-                    op_name: mt.OpenMedicMonitor.get_op(op_name=op_name).initialize(**params)
-                }
+                    op_name: mt.OpenMedicMonitor.get_op(op_name=op_name).initialize(
+                        **params,
+                    ),
+                },
             )
 
         return monitor_map_ops
@@ -160,7 +198,7 @@ class OpenMedicTrainer:
         optimizer: optim.Optimizer,
         loss_function: nn.Module,
         metric_op: metric.OpenMedicMetricOpBase,
-        monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase]
+        monitor_map_ops: Dict[str, mt.OpenMedicMonitorOpBase],
     ):
         """Note: Recommend to initalize object by `initialize_with_config` method.
 
@@ -197,14 +235,15 @@ class OpenMedicTrainer:
         return losses, metric_score
 
     def get_object(self, names: List[str]) -> list:
-        return [
-            getattr(self, name)
-            for name in names
-        ]
+        return [getattr(self, name) for name in names]
 
     def _execute_check_point(self, **kwargs):
         import openmedic.core.shared.services.objects.ops.monitors.checkpoint as checkpoint
-        checkpoint_handler: Optional[checkpoint.CheckPoint] = self.monitor_map_ops.get("CheckPoint", None)
+
+        checkpoint_handler: Optional[checkpoint.CheckPoint] = self.monitor_map_ops.get(
+            "CheckPoint",
+            None,
+        )
         if not checkpoint_handler:
             return
 
@@ -213,5 +252,3 @@ class OpenMedicTrainer:
     def execute_monitor(self, **kwargs):
         for monitor_op in self.monitor_map_ops.values():
             monitor_op.execute(**kwargs)
-
-

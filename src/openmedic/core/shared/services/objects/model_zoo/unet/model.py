@@ -1,5 +1,7 @@
 import torch
+
 import openmedic.core.shared.services.objects.model as custom_model
+
 from . import utils
 
 
@@ -10,17 +12,17 @@ class UNet(custom_model.OpenMedicModelBase):
         self.n_classes = n_classes
         self.bilinear = bilinear
 
-        self.inc = (utils.DoubleConv(n_channels, 64))
-        self.down1 = (utils.Down(64, 128))
-        self.down2 = (utils.Down(128, 256))
-        self.down3 = (utils.Down(256, 512))
+        self.inc = utils.DoubleConv(n_channels, 64)
+        self.down1 = utils.Down(64, 128)
+        self.down2 = utils.Down(128, 256)
+        self.down3 = utils.Down(256, 512)
         factor = 2 if bilinear else 1
-        self.down4 = (utils.Down(512, 1024 // factor))
-        self.up1 = (utils.Up(1024, 512 // factor, bilinear))
-        self.up2 = (utils.Up(512, 256 // factor, bilinear))
-        self.up3 = (utils.Up(256, 128 // factor, bilinear))
-        self.up4 = (utils.Up(128, 64, bilinear))
-        self.outc = (utils.OutConv(64, n_classes))
+        self.down4 = utils.Down(512, 1024 // factor)
+        self.up1 = utils.Up(1024, 512 // factor, bilinear)
+        self.up2 = utils.Up(512, 256 // factor, bilinear)
+        self.up3 = utils.Up(256, 128 // factor, bilinear)
+        self.up4 = utils.Up(128, 64, bilinear)
+        self.outc = utils.OutConv(64, n_classes)
 
     def forward(self, x):
         x1 = self.inc(x)
