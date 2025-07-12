@@ -14,6 +14,7 @@ from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
 from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
+from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
 
 
 class OpenMedicExeception(Exception):
@@ -183,10 +184,12 @@ class OpenMedicManager:
         ]
 
     @classmethod
-    def _get_eval_objects(cls) -> any:
-        # TODO: Need to implement logics
+    def _get_eval_objects(cls) -> List[Union[OpenMedicDataset, OpenMedicEvaluator]]:
         """Gets OpenMedic objects for evaluation pipeline."""
-        pass
+        return [
+            OpenMedicDataset.initialize_with_config(),
+            OpenMedicEvaluator.initialize_with_config(),
+        ]
 
     @classmethod
     def _get_inference_objects(cls) -> any:
@@ -220,6 +223,7 @@ class OpenMedicManager:
         """Initializes the object with bare-bones attributes."""
         self.open_dataset: Optional[OpenMedicDataset] = None
         self.open_trainer: Optional[OpenMedicTrainer] = None
+        self.open_evaluator: Optional[OpenMedicEvaluator] = None
         self.open_model: Optional[OpenMedicModelBase] = None
         self.optimizer: Optional[optim.Optimizer] = None
         self.train_loader: Optional[DataLoader] = None
@@ -404,8 +408,38 @@ class OpenMedicManager:
         OpenMedicPipelineResult.update(attr_name="open_model", val=self.open_model)
         self.open_trainer.execute_monitor(**kwargs)
 
-    def plan_eval(self, config_path: str):
-        pass
+    def plan_eval(self):
+        """Plans and prepares objects for evaluation pipeline.
+        Note: The ConfigReader need to be initialized before.
+        """
+        self.open_dataset, self.open_evaluator = self._get_objects(mode="eval")
+        self.pipeline_info = OpenMedicPipeline.get_pipeline_info()
+        self.data_info = ConfigReader.get_field(name="data")
+        logging.info(
+            f"[OpenMedicManager][plan_eval]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
+        )
+
+        train_dataset: OpenMedicDataset
+        val_dataset: OpenMedicDataset
+        train_dataset, val_dataset = self._train_val_split()
+        self.train_loader = DataLoader(
+            dataset=train_dataset,
+            batch_size=self.pipeline_info["batch_size"],
+            shuffle=self.pipeline_info["is_shuffle"],
+            num_workers=self.pipeline_info["num_workers"],
+        )
+        self.eval_loader: DataLoader = DataLoader(
+            dataset=val_dataset,
+            batch_size=self.pipeline_info["batch_size"],
+            shuffle=self.pipeline_info["is_shuffle"],
+            num_workers=self.pipeline_info["num_workers"],
+        )
+
+        self.open_model = self.open_evaluator.get_object(names=["model"])[0]
+        if self.pipeline_info["is_gpu"]:
+            self.open_model = self.open_model.to(device=self.device)
+
+        OpenMedicPipelineResult.init_metadata(mode="eval")
 
     def execute_eval_per_epoch(self, epoch: int):
         """Execute evaluation process per epoch.
@@ -438,13 +472,18 @@ class OpenMedicManager:
         metric_score: float
         eval_metric_scores: list = []
         eval_losses: list = []
+        # Use evaluator if available, otherwise fall back to trainer
+        evaluator_obj = self.open_evaluator if self.open_evaluator else self.open_trainer
+        # Use eval_loader (validation set) for evaluation
+        data_loader = self.eval_loader if self.eval_loader else self.train_loader
+        
         with torch.no_grad():
-            for step, (images, gts) in enumerate(self.train_loader, 1):
+            for step, (images, gts) in enumerate(data_loader, 1):
                 images, gts = self._process_batch(
                     images=images,
                     gts=gts,
                 )
-                loss, metric_score = self.open_trainer.feedforward(
+                loss, metric_score = evaluator_obj.feedforward(
                     images=images,
                     gts=gts,
                 )
