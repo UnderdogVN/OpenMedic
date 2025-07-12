@@ -223,10 +223,10 @@ class OpenMedicManager:
         ]
 
     @classmethod
-    def _get_inference_objects(cls) -> any:
+    def _get_inference_objects(cls) -> OpenMedicInferencer:
         # TODO: Need to implement logics
         """Gets OpenMedic objects for inference pipeline."""
-        pass
+        return OpenMedicInferencer.initialize_with_config()
 
     @classmethod
     def _get_objects(cls, mode: str = "") -> list:
