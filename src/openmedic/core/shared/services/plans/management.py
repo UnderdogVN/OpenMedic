@@ -506,7 +506,4 @@ class OpenMedicManager:
 
         # Update to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="eval_losses", val=eval_loss_per_step)
-        OpenMedicPipelineResult.update(
-            attr_name="eval_metric_scores",
-            val=eval_metric_score_per_step,
-        )
+        OpenMedicPipelineResult.update(attr_name="eval_metric_scores", val=eval_metric_score_per_step)
