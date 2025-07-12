@@ -12,8 +12,11 @@ from torch.utils.data import DataLoader, random_split
 import openmedic.core.shared.services.utils as utils
 from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
-from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
-from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
+from openmedic.core.shared.services.plans import (
+    OpenMedicDataset,
+    OpenMedicInferencer,
+    OpenMedicTrainer,
+)
 
 
 class OpenMedicExeception(Exception):
@@ -189,10 +192,10 @@ class OpenMedicManager:
         pass
 
     @classmethod
-    def _get_inference_objects(cls) -> any:
+    def _get_inference_objects(cls) -> OpenMedicInferencer:
         # TODO: Need to implement logics
         """Gets OpenMedic objects for inference pipeline."""
-        pass
+        return OpenMedicInferencer.initialize_with_config()
 
     @classmethod
     def _get_objects(cls, mode: str) -> list:
