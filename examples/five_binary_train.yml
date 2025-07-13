@@ -54,3 +54,15 @@ monitor:
       # Options: train_losses, train_metric_scores, eval_losses, eval_metric_scores
       target_score: train_losses
       patience: 5
+
+inference:
+  input_path: ""
+  batch_size: 1
+  transform:
+    Resize:
+      target_w: 512
+      target_h: 512
+      interpolation: INTER_LINEAR
+  model_path: ""
+  device: cpu
+  output_path: "./output"

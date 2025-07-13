@@ -50,6 +50,7 @@ class ConfigReader:
             # TODO [feature/evaluation_pipeline]: removes temporarily some required fields in pipeline to run eval pipelines
             # Will resolve it in different PR
             "pipeline": ["batch_size"],
+            "inference": ["input_path", "model_path"],
         }
         required_fields: list = REQUIRED_FIELD_MAPPING.get(name, [])
 
@@ -78,6 +79,7 @@ class ConfigReader:
             "pipeline",
             "metric",
             "monitor",
+            "inference",
         ]
         error_msg: str = ""
         try:
