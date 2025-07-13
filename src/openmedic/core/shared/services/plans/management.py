@@ -419,17 +419,8 @@ class OpenMedicManager:
             f"[OpenMedicManager][plan_eval]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
         )
 
-        train_dataset: OpenMedicDataset
-        val_dataset: OpenMedicDataset
-        train_dataset, val_dataset = self._train_val_split()
-        self.train_loader = DataLoader(
-            dataset=train_dataset,
-            batch_size=self.pipeline_info["batch_size"],
-            shuffle=self.pipeline_info["is_shuffle"],
-            num_workers=self.pipeline_info["num_workers"],
-        )
         self.eval_loader: DataLoader = DataLoader(
-            dataset=val_dataset,
+            dataset=self.open_dataset,
             batch_size=self.pipeline_info["batch_size"],
             shuffle=self.pipeline_info["is_shuffle"],
             num_workers=self.pipeline_info["num_workers"],
@@ -472,10 +463,15 @@ class OpenMedicManager:
         metric_score: float
         eval_metric_scores: list = []
         eval_losses: list = []
-        # Use evaluator if available, otherwise fall back to trainer
-        evaluator_obj = self.open_evaluator if self.open_evaluator else self.open_trainer
-        # Use eval_loader (validation set) for evaluation
-        data_loader = self.eval_loader if self.eval_loader else self.train_loader
+        
+        # Validate that evaluator is available
+        if self.open_evaluator is None:
+            raise OpenMedicExeception(
+                "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first."
+            )
+        
+        # Use eval_loader for evaluation
+        data_loader = self.eval_loader
         
         with torch.no_grad():
             for step, (images, gts) in enumerate(data_loader, 1):
@@ -483,7 +479,7 @@ class OpenMedicManager:
                     images=images,
                     gts=gts,
                 )
-                loss, metric_score = evaluator_obj.feedforward(
+                loss, metric_score = self.open_evaluator.feedforward(
                     images=images,
                     gts=gts,
                 )
