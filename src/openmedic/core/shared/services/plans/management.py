@@ -233,7 +233,7 @@ class OpenMedicManager:
         pass
 
     @classmethod
-    def _get_objects(cls, mode: str) -> list:
+    def _get_objects(cls, mode: str='') -> list:
         """Gets OpenMedic objects.
 
         Input:
@@ -266,6 +266,7 @@ class OpenMedicManager:
         self.pipeline_info: dict = {}
         self.data_info: dict = {}
         self.device: str = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._mode: str = ''
 
     def _train_val_split(self) -> List[OpenMedicDataset]:
         """Splits dataset to train/val datasets.
@@ -330,8 +331,9 @@ class OpenMedicManager:
         """Plans and prepares objects for traininig pipeline.
         Note: The ConfigReader need to be initialized before.
         """
-        self.open_dataset, self.open_trainer = self._get_objects(mode="train")
-        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode="train")
+        self._mode = "train"
+        self.open_dataset, self.open_trainer = self._get_objects(mode=self._mode)
+        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode=self._mode)
         self.data_info = ConfigReader.get_field(name="data")
         logging.info(
             f"[OpenMedicManager][plan_train]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
@@ -359,7 +361,7 @@ class OpenMedicManager:
         if self.pipeline_info["is_gpu"]:
             self.open_model = self.open_model.to(device=self.device)
 
-        OpenMedicPipelineResult.init_metadata(mode="train")
+        OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
     def activate_train(self):
         """Activate train mode."""
@@ -441,14 +443,18 @@ class OpenMedicManager:
         """
         # Updated to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="open_model", val=self.open_model)
-        self.open_trainer.execute_monitor(**kwargs)
+        if self._mode=="train":
+            self.open_trainer.execute_monitor(**kwargs)
+        elif self._mode=="eval":
+            self.open_evaluator.execute_monitor(**kwargs)
 
     def plan_eval(self):
         """Plans and prepares objects for evaluation pipeline.
         Note: The ConfigReader need to be initialized before.
         """
-        self.open_dataset, self.open_evaluator = self._get_objects(mode="eval")
-        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode="eval")
+        self._mode = "eval"
+        self.open_dataset, self.open_evaluator = self._get_objects(mode=self._mode)
+        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode=self._mode)
         self.data_info = ConfigReader.get_field(name="data")
         logging.info(
             f"[OpenMedicManager][plan_eval]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
@@ -465,7 +471,7 @@ class OpenMedicManager:
         if self.pipeline_info["is_gpu"]:
             self.open_model = self.open_model.to(device=self.device)
 
-        OpenMedicPipelineResult.init_metadata(mode="eval")
+        OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
     def execute_eval_per_epoch(self, epoch: int):
         """Execute evaluation process per epoch.

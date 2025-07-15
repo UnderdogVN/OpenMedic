@@ -223,5 +223,5 @@ class OpenMedicEvaluator:
         ------
             **kwargs - Keyword arguments for monitor operations.
         """
-        for monitor_name, monitor_op in self.monitor_map_ops.items():
+        for monitor_name, monitor_op in self.monitor_map_ops.items(): 
             monitor_op.execute(**kwargs)
