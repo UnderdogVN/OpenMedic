@@ -21,7 +21,6 @@ pipeline:
   seed: 42
   batch_size: 4
   is_shuffle: false
-  n_epochs: 50
   train_ratio: 0.8
   is_gpu: true
   verbose: true
