@@ -60,7 +60,10 @@ class OpenMedicEvaluator:
         """
         model_name: str = model_info["name"]
         model_params: dict = model_info["params"]
-        model_checkpoint: str = model_info.get("model_checkpoint", "")
+        model_checkpoint: str = model_info.get("model_checkpoint", '')
+        if not model_checkpoint:
+            raise OpenMedicEvaluatorException("[OpenmedicEvaluator][_get_model]: Requires `model_checkpoint` parameter of `model` field in configuration file.")
+        
         model: OpenMedicModelBase = OpenMedicModel.get_model(model_name=model_name)(
             **model_params,
         )
