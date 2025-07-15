@@ -4,8 +4,8 @@ import click
 
 logging.basicConfig(level=logging.INFO)
 
-import openmedic.core.pipelines.train as train_pipeline
 import openmedic.core.pipelines.eval as eval_pipeline
+import openmedic.core.pipelines.train as train_pipeline
 from openmedic.cli.cli_management import cli
 
 

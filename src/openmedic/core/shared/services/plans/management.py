@@ -13,8 +13,8 @@ import openmedic.core.shared.services.utils as utils
 from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
 from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
-from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
 from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
+from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
 
 
 class OpenMedicExeception(Exception):
@@ -164,7 +164,7 @@ class OpenMedicPipelineResult:
             "loss_function": ConfigReader.get_field(name="loss_function"),
             "metric": ConfigReader.get_field(name="metric"),
         }
-    
+
     @classmethod
     def _init_eval_metadata(cls) -> dict:
         # Get all informations
@@ -229,7 +229,7 @@ class OpenMedicManager:
         pass
 
     @classmethod
-    def _get_objects(cls, mode: str='') -> list:
+    def _get_objects(cls, mode: str = "") -> list:
         """Gets OpenMedic objects.
 
         Input:
@@ -262,7 +262,7 @@ class OpenMedicManager:
         self.pipeline_info: dict = {}
         self.data_info: dict = {}
         self.device: str = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self._mode: str = ''
+        self._mode: str = ""
 
     def _train_val_split(self) -> List[OpenMedicDataset]:
         """Splits dataset to train/val datasets.
@@ -439,9 +439,9 @@ class OpenMedicManager:
         """
         # Updated to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="open_model", val=self.open_model)
-        if self._mode=="train":
+        if self._mode == "train":
             self.open_trainer.execute_monitor(**kwargs)
-        elif self._mode=="eval":
+        elif self._mode == "eval":
             self.open_evaluator.execute_monitor(**kwargs)
 
     def plan_eval(self):
@@ -483,14 +483,12 @@ class OpenMedicManager:
             open_manager.plan_eval(
                 config_path=config_path
             )
-            # Or open_manager.plan_train(...)
 
-            n_epochs: int = open_manager.pipeline_info["n_epochs"]
-            for epoch in range(1, n_epochs + 1):
-                open_manager.activate_eval()
-                eval_loss: float
-                eval_metric_score: float
-                eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch)
+            open_manager.activate_eval()
+            open_manager.execute_eval_per_epoch(epoch=1)
+
+            # Monitor progress (if monitors are configured)
+            open_manager.monitor_per_epoch()
         ```
         """
         step: int
@@ -500,16 +498,16 @@ class OpenMedicManager:
         metric_score: float
         eval_metric_scores: list = []
         eval_losses: list = []
-        
+
         # Validate that evaluator is available
         if self.open_evaluator is None:
             raise OpenMedicExeception(
                 "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first."
             )
-        
+
         # Use eval_loader for evaluation
         data_loader = self.eval_loader
-        
+
         with torch.no_grad():
             for step, (images, gts) in enumerate(data_loader, 1):
                 images, gts = self._process_batch(
@@ -539,4 +537,6 @@ class OpenMedicManager:
 
         # Update to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="eval_losses", val=eval_loss_per_step)
-        OpenMedicPipelineResult.update(attr_name="eval_metric_scores", val=eval_metric_score_per_step)
+        OpenMedicPipelineResult.update(
+            attr_name="eval_metric_scores", val=eval_metric_score_per_step
+        )

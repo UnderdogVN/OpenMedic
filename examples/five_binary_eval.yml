@@ -18,10 +18,7 @@ model:
   model_checkpoint: /home/nathanngo/projects/KC-2025/segmentation/best_202050605.pth
 
 pipeline:
-  seed: 42
   batch_size: 4
-  is_shuffle: false
-  n_epochs: 2
   is_gpu: true
   verbose: true
 
@@ -44,7 +41,3 @@ metric:
 monitor:
   CheckPoint: 
     mode: eval
-    # save_best:
-    #   # Options: train_losses, train_metric_scores, eval_losses, eval_metric_scores
-    #   target_score: train_losses
-    #   patience: 5

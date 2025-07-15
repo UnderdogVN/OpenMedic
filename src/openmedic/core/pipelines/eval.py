@@ -14,11 +14,11 @@ warnings.filterwarnings("ignore")
 @helper.montior
 def run(*, config_path: str) -> dict:
     """Runs the evaluation pipeline.
-    
+
     Input:
     ------
         config_path: str - Path to the configuration file.
-        
+
     Output:
     -------
         dict - Returns evaluation results with timestamp.
@@ -36,8 +36,8 @@ def run(*, config_path: str) -> dict:
     open_manager.execute_eval_per_epoch(epoch=1)
 
     # Monitor progress (if monitors are configured)
-    open_manager.monitor_per_epoch()    
+    open_manager.monitor_per_epoch()
 
     return {
         "timestamp": ts,
-    } 
+    }

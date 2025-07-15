@@ -26,9 +26,9 @@ class CheckPoint(OpenMedicMonitorOpBase):
         model_file: str,
         is_replace: bool = False,
         save_best: dict = {},
-        target_score: str = '',
+        target_score: str = "",
         patience: Optional[None] = None,
-        mode: str = ''
+        mode: str = "",
     ):
         self.model_dir: str = model_dir
         self.model_file: str = model_file
@@ -50,7 +50,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         mode: str = "train",
         *args,
         **kwargs,
-    ):      
+    ):
         if bool(model_dir) != bool(model_file):
             raise OpenMedicMonitorOpError(
                 "Need to declare `model_dir` and `model_file` at the same time.",
@@ -77,11 +77,21 @@ class CheckPoint(OpenMedicMonitorOpBase):
         os.makedirs(name=model_dir, exist_ok=True)
         target_score: str = ""
         patience: Optional[int] = None
-        
-        logging.info(f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}")
-        
+
+        logging.info(
+            f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}"
+        )
+
         if mode == "eval":
-            return cls(model_dir, model_file, is_replace, save_best, target_score, patience, mode)
+            return cls(
+                model_dir,
+                model_file,
+                is_replace,
+                save_best,
+                target_score,
+                patience,
+                mode,
+            )
         elif mode == "train":
             if save_best:
                 patience = save_best.get("patience", None)
@@ -106,8 +116,16 @@ class CheckPoint(OpenMedicMonitorOpBase):
                         raise OpenMedicMonitorOpError(
                             f"Expects value {','.join(SCORE_SUPPORTS)} in `target_score`.",
                         )
-            return cls(model_dir, model_file, is_replace, save_best, target_score, patience, mode)
-    
+            return cls(
+                model_dir,
+                model_file,
+                is_replace,
+                save_best,
+                target_score,
+                patience,
+                mode,
+            )
+
     def _save_metadata(self):
         metadata: dict = OpenMedicPipelineResult.get_metadata()
         metadata_path: str = os.path.join(self.model_dir, "metadata.yml")
@@ -119,6 +137,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
             file_path=scores_data_path,
             if_exist="overwrite",
         )
+
     def _save_model(self):
         is_save_model: bool = True
         if self.save_best:
@@ -160,6 +179,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         self._save_metadata()
         if self.mode == "train":
             self._save_model()
+
 
 def init():
     registry.MonitorRegister.register(monitor_class=CheckPoint)

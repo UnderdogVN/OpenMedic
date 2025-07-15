@@ -17,7 +17,9 @@ from openmedic.core.shared.services.objects.model import (
 class OpenMedicEvaluatorException(Exception):
     """Customizes exception for OpenMedicEvaluator"""
 
-    def __init__(self, message: str = "An error occurred in OpenMedicEvaluatorException"):
+    def __init__(
+        self, message: str = "An error occurred in OpenMedicEvaluatorException"
+    ):
         self.message: str = message
         super().__init__(self.message)
 
@@ -60,10 +62,12 @@ class OpenMedicEvaluator:
         """
         model_name: str = model_info["name"]
         model_params: dict = model_info["params"]
-        model_checkpoint: str = model_info.get("model_checkpoint", '')
+        model_checkpoint: str = model_info.get("model_checkpoint", "")
         if not model_checkpoint:
-            raise OpenMedicEvaluatorException("[OpenmedicEvaluator][_get_model]: Requires `model_checkpoint` parameter of `model` field in configuration file.")
-        
+            raise OpenMedicEvaluatorException(
+                "[OpenmedicEvaluator][_get_model]: Requires `model_checkpoint` parameter of `model` field in configuration file."
+            )
+
         model: OpenMedicModelBase = OpenMedicModel.get_model(model_name=model_name)(
             **model_params,
         )
@@ -223,5 +227,5 @@ class OpenMedicEvaluator:
         ------
             **kwargs - Keyword arguments for monitor operations.
         """
-        for monitor_name, monitor_op in self.monitor_map_ops.items(): 
+        for monitor_name, monitor_op in self.monitor_map_ops.items():
             monitor_op.execute(**kwargs)
