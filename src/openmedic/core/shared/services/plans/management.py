@@ -77,10 +77,8 @@ class OpenMedicPipeline:
     def _get_eval_pipeline_info(cls, pipeline_info: dict) -> dict:
         # Required fields
         batch_size: int = pipeline_info["batch_size"]
-        n_epochs: int = pipeline_info["n_epochs"]
 
         # Optional fields
-        seed: int = pipeline_info.get("seed", 1)
         is_shuffle: bool = pipeline_info.get("is_shuffle", False)
         num_workers: int = pipeline_info.get("num_workers", 1)
         is_gpu: bool = pipeline_info.get("is_gpu", True)
@@ -88,10 +86,8 @@ class OpenMedicPipeline:
 
         return {
             "batch_size": batch_size,
-            "n_epochs": n_epochs,
             "is_shuffle": is_shuffle,
             "num_workers": num_workers,
-            "seed": seed,
             "is_gpu": is_gpu,
             "verbose": verbose,
         }

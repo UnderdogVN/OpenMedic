@@ -31,17 +31,12 @@ def run(*, config_path: str) -> dict:
     ts: int = int(now.timestamp())
 
     logging.info(f"[eval][run]: Executing evaluation pipeline...")
-    n_epochs: int = open_manager.pipeline_info.get("n_epochs", 1)
-    
-    for epoch in range(1, n_epochs + 1):
-        logging.info(f"[eval][run]: Running evaluation epoch: {epoch}/{n_epochs}...")
+    # Evaluation progress
+    open_manager.activate_eval()
+    open_manager.execute_eval_per_epoch(epoch=1)
 
-        # Evaluation progress
-        open_manager.activate_eval()
-        open_manager.execute_eval_per_epoch(epoch=epoch)
-
-        # Monitor progress (if monitors are configured)
-        open_manager.monitor_per_epoch()
+    # Monitor progress (if monitors are configured)
+    open_manager.monitor_per_epoch()    
 
     return {
         "timestamp": ts,

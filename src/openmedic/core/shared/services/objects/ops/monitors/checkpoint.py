@@ -78,6 +78,8 @@ class CheckPoint(OpenMedicMonitorOpBase):
         target_score: str = ""
         patience: Optional[int] = None
         
+        logging.info(f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}")
+        
         if mode == "eval":
             return cls(model_dir, model_file, is_replace, save_best, target_score, patience, mode)
         elif mode == "train":
