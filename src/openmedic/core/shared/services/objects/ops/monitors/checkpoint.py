@@ -28,6 +28,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         save_best: dict = {},
         target_score: str = "",
         patience: Optional[None] = None,
+        mode: str = "",
     ):
         self.model_dir: str = model_dir
         self.model_file: str = model_file
@@ -37,6 +38,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         self._count: int = 0
         self.target_score: str = target_score
         self.patience: Optional[int] = patience
+        self.mode: str = mode
 
     @classmethod
     def initialize(
@@ -45,6 +47,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         model_file: str = "",
         is_replace: bool = False,
         save_best: dict = {},
+        mode: str = "train",
         *args,
         **kwargs,
     ):
@@ -74,49 +77,68 @@ class CheckPoint(OpenMedicMonitorOpBase):
         os.makedirs(name=model_dir, exist_ok=True)
         target_score: str = ""
         patience: Optional[int] = None
-        if save_best:
-            patience = save_best.get("patience", None)
-            if patience == 0:
-                raise OpenMedicMonitorOpError(
-                    "Can not set `patience` equal to 0. If you do not want apply earl stopping, please removes `patience`.",
-                )
 
-            target_score: str = save_best.get("target_score", "")
-            SCORE_SUPPORTS: list = [
-                "train_losses",
-                "train_metric_scores",
-                "eval_losses",
-                "eval_metric_scores",
-            ]
-            if target_score not in SCORE_SUPPORTS:
-                if target_score == "":
+        logging.info(
+            f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}"
+        )
+
+        if mode == "eval":
+            return cls(
+                model_dir,
+                model_file,
+                is_replace,
+                save_best,
+                target_score,
+                patience,
+                mode,
+            )
+        elif mode == "train":
+            if save_best:
+                patience = save_best.get("patience", None)
+                if patience == 0:
                     raise OpenMedicMonitorOpError(
-                        "Needs to set `target_score` parameter in `save_best`.",
+                        "Can not set `patience` equal to 0. If you do not want apply earl stopping, please removes `patience`.",
                     )
-                else:
-                    raise OpenMedicMonitorOpError(
-                        f"Expects value {','.join(SCORE_SUPPORTS)} in `target_score`.",
-                    )
-        return cls(model_dir, model_file, is_replace, save_best, target_score, patience)
 
-    def _get_target_score_name(self) -> str:
-        target_dataset: str = self.save_best.get("target_data", None)
-        assert isinstance(
-            target_dataset,
-            str,
-        ), "`target_dataset` parameter does not exist in `save_best`"
-        target_score: str = self.save_best.get("target_score", None)
-        assert isinstance(
-            target_score,
-            str,
-        ), "`target_dataset` parameter does not exist in `save_best`"
+                target_score: str = save_best.get("target_score", "")
+                SCORE_SUPPORTS: list = [
+                    "train_losses",
+                    "train_metric_scores",
+                    "eval_losses",
+                    "eval_metric_scores",
+                ]
+                if target_score not in SCORE_SUPPORTS:
+                    if target_score == "":
+                        raise OpenMedicMonitorOpError(
+                            "Needs to set `target_score` parameter in `save_best`.",
+                        )
+                    else:
+                        raise OpenMedicMonitorOpError(
+                            f"Expects value {','.join(SCORE_SUPPORTS)} in `target_score`.",
+                        )
+            return cls(
+                model_dir,
+                model_file,
+                is_replace,
+                save_best,
+                target_score,
+                patience,
+                mode,
+            )
 
-        return f"{target_dataset}_{target_score}"
+    def _save_metadata(self):
+        metadata: dict = OpenMedicPipelineResult.get_metadata()
+        metadata_path: str = os.path.join(self.model_dir, "metadata.yml")
+        scores_data: dict = OpenMedicPipelineResult.get_scores()
+        scores_data_path: str = os.path.join(self.model_dir, "checkpoint.json")
+        utils.save_as_yml(data=metadata, file_path=metadata_path, if_exist="overwrite")
+        utils.save_as_json(
+            data=scores_data,
+            file_path=scores_data_path,
+            if_exist="overwrite",
+        )
 
-    def _save(self, model):
-        pass
-
-    def execute(self, **kwargs):
+    def _save_model(self):
         is_save_model: bool = True
         if self.save_best:
             scores: List[float] = OpenMedicPipelineResult.get_result(
@@ -142,17 +164,6 @@ class CheckPoint(OpenMedicMonitorOpBase):
                 )
                 self.best_score = latest_score
 
-        metadata: dict = OpenMedicPipelineResult.get_metadata()
-        metadata_path: str = os.path.join(self.model_dir, "metadata.yml")
-        scores_data: dict = OpenMedicPipelineResult.get_scores()
-        scores_data_path: str = os.path.join(self.model_dir, "checkpoint.json")
-        utils.save_as_yml(data=metadata, file_path=metadata_path, if_exist="overwrite")
-        utils.save_as_json(
-            data=scores_data,
-            file_path=scores_data_path,
-            if_exist="overwrite",
-        )
-
         if is_save_model:
             model: OpenMedicModelBase = OpenMedicPipelineResult.get_model()
             model_path: str = os.path.join(self.model_dir, self.model_file)
@@ -163,6 +174,11 @@ class CheckPoint(OpenMedicMonitorOpBase):
                 raise utils.BreakLoop(
                     f"[CheckPoint][Exception]: The score has stopped improving after {self.patience} times",
                 )
+
+    def execute(self, **kwargs):
+        self._save_metadata()
+        if self.mode == "train":
+            self._save_model()
 
 
 def init():

@@ -47,7 +47,9 @@ class ConfigReader:
             "loss_function": ["name", "params", "type"],
             "optimization": ["name", "params"],
             "metric": ["name", "params"],
-            "pipeline": ["batch_size", "n_epochs", "train_ratio"],
+            # TODO [feature/evaluation_pipeline]: removes temporarily some required fields in pipeline to run eval pipelines
+            # Will resolve it in different PR
+            "pipeline": ["batch_size"],
         }
         required_fields: list = REQUIRED_FIELD_MAPPING.get(name, [])
 

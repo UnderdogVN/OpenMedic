@@ -15,22 +15,12 @@ model:
   params:
     n_channels: 3
     n_classes: 2
-    #  model_checkpoint: ./best_202050604.pth
+  model_checkpoint: /home/nathanngo/projects/KC-2025/segmentation/best_202050605.pth
 
 pipeline:
-  seed: 42
   batch_size: 4
-  is_shuffle: false
-  n_epochs: 50
-  train_ratio: 0.8
   is_gpu: true
   verbose: true
-
-optimization:
-  name: AdamW
-  params:
-    lr: 0.0001
-    weight_decay: 0.0001
 
 loss_function:
   name: CrossEntropyLoss
@@ -49,8 +39,5 @@ metric:
     n_classes: 2
 
 monitor:
-  CheckPoint:
-    save_best:
-      # Options: train_losses, train_metric_scores, eval_losses, eval_metric_scores
-      target_score: train_losses
-      patience: 5
+  CheckPoint: 
+    mode: eval

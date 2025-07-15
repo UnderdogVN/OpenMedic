@@ -1,0 +1,56 @@
+data:
+  image_dir: "/mnt/data_lab513/kc/fundus/fives-coco/images"
+  coco_annotation_path: "/mnt/data_lab513/kc/fundus/fives-coco/train_binary.json"
+
+transform:
+  Resize:
+    target_w: 512
+    target_h: 512
+    interpolation: INTER_LINEAR
+  Flip:
+    is_vertical: true
+
+model:
+  name: UNet
+  params:
+    n_channels: 3
+    n_classes: 2
+    #  model_checkpoint: ./best_202050604.pth
+
+pipeline:
+  seed: 42
+  batch_size: 4
+  is_shuffle: false
+  train_ratio: 0.8
+  n_epochs: 50
+  is_gpu: true
+  verbose: true
+
+optimization:
+  name: AdamW
+  params:
+    lr: 0.0001
+    weight_decay: 0.0001
+
+loss_function:
+  name: CrossEntropyLoss
+  type: torch
+  params:
+    reduction: mean
+    weight:
+    - 0.1
+    - 1.0
+
+metric:
+  name: DiceCoefficient
+  params:
+    epsilon: 1e-5
+    include_background: false
+    n_classes: 2
+
+monitor:
+  CheckPoint:
+    save_best:
+      # Options: train_losses, train_metric_scores, eval_losses, eval_metric_scores
+      target_score: train_losses
+      patience: 5

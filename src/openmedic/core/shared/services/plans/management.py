@@ -13,6 +13,7 @@ import openmedic.core.shared.services.utils as utils
 from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
 from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
+from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
 
 
@@ -68,6 +69,25 @@ class OpenMedicPipeline:
             "is_shuffle": is_shuffle,
             "num_workers": num_workers,
             "seed": seed,
+            "is_gpu": is_gpu,
+            "verbose": verbose,
+        }
+
+    @classmethod
+    def _get_eval_pipeline_info(cls, pipeline_info: dict) -> dict:
+        # Required fields
+        batch_size: int = pipeline_info["batch_size"]
+
+        # Optional fields
+        is_shuffle: bool = pipeline_info.get("is_shuffle", False)
+        num_workers: int = pipeline_info.get("num_workers", 1)
+        is_gpu: bool = pipeline_info.get("is_gpu", True)
+        verbose: bool = pipeline_info.get("verbose", True)
+
+        return {
+            "batch_size": batch_size,
+            "is_shuffle": is_shuffle,
+            "num_workers": num_workers,
             "is_gpu": is_gpu,
             "verbose": verbose,
         }
@@ -146,6 +166,18 @@ class OpenMedicPipelineResult:
         }
 
     @classmethod
+    def _init_eval_metadata(cls) -> dict:
+        # Get all informations
+        return {
+            "data": ConfigReader.get_field(name="data"),
+            "transform": ConfigReader.get_field(name="transform"),
+            "model": ConfigReader.get_field(name="model"),
+            "pipeline": ConfigReader.get_field(name="pipeline"),
+            "loss_function": ConfigReader.get_field(name="loss_function"),
+            "metric": ConfigReader.get_field(name="metric"),
+        }
+
+    @classmethod
     def get_scores(cls) -> dict:
         return {
             "train_losses": cls.train_losses,
@@ -183,10 +215,12 @@ class OpenMedicManager:
         ]
 
     @classmethod
-    def _get_eval_objects(cls) -> any:
-        # TODO: Need to implement logics
+    def _get_eval_objects(cls) -> List[Union[OpenMedicDataset, OpenMedicEvaluator]]:
         """Gets OpenMedic objects for evaluation pipeline."""
-        pass
+        return [
+            OpenMedicDataset.initialize_with_config(),
+            OpenMedicEvaluator.initialize_with_config(),
+        ]
 
     @classmethod
     def _get_inference_objects(cls) -> any:
@@ -195,7 +229,7 @@ class OpenMedicManager:
         pass
 
     @classmethod
-    def _get_objects(cls, mode: str) -> list:
+    def _get_objects(cls, mode: str = "") -> list:
         """Gets OpenMedic objects.
 
         Input:
@@ -220,6 +254,7 @@ class OpenMedicManager:
         """Initializes the object with bare-bones attributes."""
         self.open_dataset: Optional[OpenMedicDataset] = None
         self.open_trainer: Optional[OpenMedicTrainer] = None
+        self.open_evaluator: Optional[OpenMedicEvaluator] = None
         self.open_model: Optional[OpenMedicModelBase] = None
         self.optimizer: Optional[optim.Optimizer] = None
         self.train_loader: Optional[DataLoader] = None
@@ -227,6 +262,7 @@ class OpenMedicManager:
         self.pipeline_info: dict = {}
         self.data_info: dict = {}
         self.device: str = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._mode: str = ""
 
     def _train_val_split(self) -> List[OpenMedicDataset]:
         """Splits dataset to train/val datasets.
@@ -291,8 +327,9 @@ class OpenMedicManager:
         """Plans and prepares objects for traininig pipeline.
         Note: The ConfigReader need to be initialized before.
         """
-        self.open_dataset, self.open_trainer = self._get_objects(mode="train")
-        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode="train")
+        self._mode = "train"
+        self.open_dataset, self.open_trainer = self._get_objects(mode=self._mode)
+        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode=self._mode)
         self.data_info = ConfigReader.get_field(name="data")
         logging.info(
             f"[OpenMedicManager][plan_train]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
@@ -320,7 +357,7 @@ class OpenMedicManager:
         if self.pipeline_info["is_gpu"]:
             self.open_model = self.open_model.to(device=self.device)
 
-        OpenMedicPipelineResult.init_metadata(mode="train")
+        OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
     def activate_train(self):
         """Activate train mode."""
@@ -402,10 +439,35 @@ class OpenMedicManager:
         """
         # Updated to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="open_model", val=self.open_model)
-        self.open_trainer.execute_monitor(**kwargs)
+        if self._mode == "train":
+            self.open_trainer.execute_monitor(**kwargs)
+        elif self._mode == "eval":
+            self.open_evaluator.execute_monitor(**kwargs)
 
-    def plan_eval(self, config_path: str):
-        pass
+    def plan_eval(self):
+        """Plans and prepares objects for evaluation pipeline.
+        Note: The ConfigReader need to be initialized before.
+        """
+        self._mode = "eval"
+        self.open_dataset, self.open_evaluator = self._get_objects(mode=self._mode)
+        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode=self._mode)
+        self.data_info = ConfigReader.get_field(name="data")
+        logging.info(
+            f"[OpenMedicManager][plan_eval]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
+        )
+
+        self.eval_loader: DataLoader = DataLoader(
+            dataset=self.open_dataset,
+            batch_size=self.pipeline_info["batch_size"],
+            shuffle=self.pipeline_info["is_shuffle"],
+            num_workers=self.pipeline_info["num_workers"],
+        )
+
+        self.open_model = self.open_evaluator.get_object(names=["model"])[0]
+        if self.pipeline_info["is_gpu"]:
+            self.open_model = self.open_model.to(device=self.device)
+
+        OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
     def execute_eval_per_epoch(self, epoch: int):
         """Execute evaluation process per epoch.
@@ -421,14 +483,12 @@ class OpenMedicManager:
             open_manager.plan_eval(
                 config_path=config_path
             )
-            # Or open_manager.plan_train(...)
 
-            n_epochs: int = open_manager.pipeline_info["n_epochs"]
-            for epoch in range(1, n_epochs + 1):
-                open_manager.activate_eval()
-                eval_loss: float
-                eval_metric_score: float
-                eval_loss, eval_metric_score = open_manager.execute_eval_per_epoch(epoch=epoch)
+            open_manager.activate_eval()
+            open_manager.execute_eval_per_epoch(epoch=1)
+
+            # Monitor progress (if monitors are configured)
+            open_manager.monitor_per_epoch()
         ```
         """
         step: int
@@ -438,13 +498,23 @@ class OpenMedicManager:
         metric_score: float
         eval_metric_scores: list = []
         eval_losses: list = []
+
+        # Validate that evaluator is available
+        if self.open_evaluator is None:
+            raise OpenMedicExeception(
+                "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first."
+            )
+
+        # Use eval_loader for evaluation
+        data_loader = self.eval_loader
+
         with torch.no_grad():
-            for step, (images, gts) in enumerate(self.train_loader, 1):
+            for step, (images, gts) in enumerate(data_loader, 1):
                 images, gts = self._process_batch(
                     images=images,
                     gts=gts,
                 )
-                loss, metric_score = self.open_trainer.feedforward(
+                loss, metric_score = self.open_evaluator.feedforward(
                     images=images,
                     gts=gts,
                 )
@@ -468,6 +538,5 @@ class OpenMedicManager:
         # Update to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="eval_losses", val=eval_loss_per_step)
         OpenMedicPipelineResult.update(
-            attr_name="eval_metric_scores",
-            val=eval_metric_score_per_step,
+            attr_name="eval_metric_scores", val=eval_metric_score_per_step
         )
