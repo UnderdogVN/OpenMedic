@@ -74,6 +74,29 @@ class OpenMedicPipeline:
         }
 
     @classmethod
+    def _get_eval_pipeline_info(cls, pipeline_info: dict) -> dict:
+        # Required fields
+        batch_size: int = pipeline_info["batch_size"]
+        n_epochs: int = pipeline_info["n_epochs"]
+
+        # Optional fields
+        seed: int = pipeline_info.get("seed", 1)
+        is_shuffle: bool = pipeline_info.get("is_shuffle", False)
+        num_workers: int = pipeline_info.get("num_workers", 1)
+        is_gpu: bool = pipeline_info.get("is_gpu", True)
+        verbose: bool = pipeline_info.get("verbose", True)
+
+        return {
+            "batch_size": batch_size,
+            "n_epochs": n_epochs,
+            "is_shuffle": is_shuffle,
+            "num_workers": num_workers,
+            "seed": seed,
+            "is_gpu": is_gpu,
+            "verbose": verbose,
+        }
+
+    @classmethod
     def get_pipeline_info(cls, mode: Optional[str] = None) -> dict:
         pipeline_info: dict = cls._get_all_pipeline_info()
         if not mode:
@@ -142,6 +165,18 @@ class OpenMedicPipelineResult:
             "model": ConfigReader.get_field(name="model"),
             "pipeline": ConfigReader.get_field(name="pipeline"),
             "optimization": ConfigReader.get_field(name="optimization"),
+            "loss_function": ConfigReader.get_field(name="loss_function"),
+            "metric": ConfigReader.get_field(name="metric"),
+        }
+    
+    @classmethod
+    def _init_eval_metadata(cls) -> dict:
+        # Get all informations
+        return {
+            "data": ConfigReader.get_field(name="data"),
+            "transform": ConfigReader.get_field(name="transform"),
+            "model": ConfigReader.get_field(name="model"),
+            "pipeline": ConfigReader.get_field(name="pipeline"),
             "loss_function": ConfigReader.get_field(name="loss_function"),
             "metric": ConfigReader.get_field(name="metric"),
         }
@@ -413,7 +448,7 @@ class OpenMedicManager:
         Note: The ConfigReader need to be initialized before.
         """
         self.open_dataset, self.open_evaluator = self._get_objects(mode="eval")
-        self.pipeline_info = OpenMedicPipeline.get_pipeline_info()
+        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode="eval")
         self.data_info = ConfigReader.get_field(name="data")
         logging.info(
             f"[OpenMedicManager][plan_eval]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
