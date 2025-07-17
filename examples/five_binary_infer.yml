@@ -1,0 +1,20 @@
+transform:
+  Resize:
+    target_w: 512
+    target_h: 512
+    interpolation: INTER_LINEAR
+
+model:
+  name: UNet
+  params:
+    n_channels: 3
+    n_classes: 2
+  model_checkpoint: ""
+
+pipeline:
+  input_path: ""
+  mask_threshold: 0.3
+  output_dir: ""
+  batch_size: 1
+  is_gpu: false
+  verbose: true

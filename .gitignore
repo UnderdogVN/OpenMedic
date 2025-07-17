@@ -2,3 +2,4 @@
 openmedic.egg-info
 uv.lock
 **/__pycache__/**
+.openmedic

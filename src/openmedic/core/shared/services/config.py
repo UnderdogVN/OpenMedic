@@ -48,6 +48,7 @@ class ConfigReader:
             "optimization": ["name", "params"],
             "metric": ["name", "params"],
             # TODO [feature/evaluation_pipeline]: removes temporarily some required fields in pipeline to run eval pipelines
+            # TODO [feature/inference_pipeline]: input_path
             # Will resolve it in different PR
             "pipeline": ["batch_size"],
         }
@@ -78,6 +79,7 @@ class ConfigReader:
             "pipeline",
             "metric",
             "monitor",
+            "inference",
         ]
         error_msg: str = ""
         try:
