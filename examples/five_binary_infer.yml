@@ -13,6 +13,7 @@ model:
 
 pipeline:
   input_path: ""
+  mask_threshold: 0.3
   output_dir: ""
   batch_size: 1
   is_gpu: false

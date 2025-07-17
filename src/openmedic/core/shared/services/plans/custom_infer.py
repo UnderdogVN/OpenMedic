@@ -129,7 +129,7 @@ class OpenMedicInferencer:
             output = self.model(image)
         return output
 
-    def postprocess(self, output):
+    def postprocess(self, output) -> np.ndarray:
         colors = [
             [255, 0, 0],
             [0, 255, 0],
@@ -153,7 +153,9 @@ class OpenMedicInferencer:
         pred_image = np.ones((height, width, 3), dtype=np.float32) * 255
         for y in range(height):
             for x in range(width):
-                selected_colors = channel_colors[output[0, :, y, x] > 0.5]
+                selected_colors = channel_colors[
+                    output[0, :, y, x] > self.inference_info.get("mask_threshold", 0.3)
+                ]
 
                 if len(selected_colors) > 0:
                     pred_image[y, x, :] = np.mean(selected_colors, axis=0)
@@ -178,19 +180,15 @@ class OpenMedicInferencer:
                 output_dir,
                 f"pred_{image_name}",
             )
-            cv2.imwrite(
-                output_path,
-                image,
-            )
         else:
             output_path = os.path.join(
                 self.inference_info["output_dir"],
                 f"pred_{image_name}",
             )
-            cv2.imwrite(
-                output_path,
-                image,
-            )
+        cv2.imwrite(
+            output_path,
+            image,
+        )
         logging.info(
             f"[inferencer][save_image]: Image saved to {output_path}",
         )
