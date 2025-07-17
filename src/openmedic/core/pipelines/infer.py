@@ -18,11 +18,11 @@ logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
-def run(*, config_path: str, input_path: str) -> dict:
-    logging.info(f"[inference][run]: Planning inference pipeline...")
+def run(*, config_path: str) -> dict:
+    logging.info("[inference][run]: Planning inference pipeline...")
     services.ConfigReader.initialize(config_path=config_path)
     open_inferencer = plans.OpenMedicInferencer.initialize_with_config()
-    open_inferencer.run_inference(input_path=input_path)
+    open_inferencer.run_inference()
     now: datetime = plans.OpenMedicPipelineResult.current_time
     ts: int = int(now.timestamp())
     logging.info(f"[inference][run]: Inference completed at {now} (timestamp: {ts})")

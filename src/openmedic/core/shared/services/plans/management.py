@@ -14,6 +14,7 @@ from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import OpenMedicModelBase
 from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
+from openmedic.core.shared.services.plans.custom_infer import OpenMedicInferencer
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
 
 
@@ -502,7 +503,7 @@ class OpenMedicManager:
         # Validate that evaluator is available
         if self.open_evaluator is None:
             raise OpenMedicExeception(
-                "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first."
+                "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first.",
             )
 
         # Use eval_loader for evaluation
@@ -538,5 +539,6 @@ class OpenMedicManager:
         # Update to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="eval_losses", val=eval_loss_per_step)
         OpenMedicPipelineResult.update(
-            attr_name="eval_metric_scores", val=eval_metric_score_per_step
+            attr_name="eval_metric_scores",
+            val=eval_metric_score_per_step,
         )

@@ -48,9 +48,9 @@ class ConfigReader:
             "optimization": ["name", "params"],
             "metric": ["name", "params"],
             # TODO [feature/evaluation_pipeline]: removes temporarily some required fields in pipeline to run eval pipelines
+            # TODO [feature/inference_pipeline]: input_path
             # Will resolve it in different PR
             "pipeline": ["batch_size"],
-            "inference": ["input_path", "model_path"],
         }
         required_fields: list = REQUIRED_FIELD_MAPPING.get(name, [])
 
