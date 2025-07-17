@@ -1,102 +1,131 @@
 import logging
-from typing import Dict
+from typing import Dict, List, Optional, Union, Literal
 
 import yaml
+from pydantic import BaseModel
 
 
 class ConfigException(Exception):
-    """Customs exception"""
+    """Custom exception"""
 
     def __init__(self, message: str = "An error occurred in ConfigReader"):
         self.message: str = message
         super().__init__(self.message)
 
+# Pydantic Schemas for Sections
+class DataConfig(BaseModel):
+    image_dir: str
+    coco_annotation_path: str
 
+
+class ResizeTransform(BaseModel):
+    target_w: int
+    target_h: int
+    interpolation: Literal["INTER_LINEAR", "INTER_NEAREST"]
+
+
+class FlipTransform(BaseModel):
+    is_vertical: bool
+
+
+class TransformConfig(BaseModel):
+    Resize: Optional[ResizeTransform] = None
+    Flip: Optional[FlipTransform] = None
+
+
+class ModelParams(BaseModel):
+    n_channels: int
+    n_classes: int
+    model_checkpoint: Optional[str] = None
+
+
+class ModelConfig(BaseModel):
+    name: str
+    params: ModelParams
+
+
+class PipelineConfig(BaseModel):
+    seed: Optional[int] = None
+    batch_size: int
+    is_shuffle: Optional[bool] = None
+    train_ratio: Optional[float] = None
+    n_epochs: Optional[int] = None
+    is_gpu: Optional[bool] = False
+    verbose: Optional[bool] = False
+
+
+class OptimizationConfig(BaseModel):
+    name: str
+    params: Dict[str, Union[float, int]]
+
+
+class LossFunctionConfig(BaseModel):
+    name: str
+    type: str
+    params: Dict[str, Union[str, List[float]]]
+
+
+class MetricParams(BaseModel):
+    epsilon: float
+    include_background: bool
+    n_classes: int
+
+
+class MetricConfig(BaseModel):
+    name: str
+    params: MetricParams
+
+
+class MonitorSaveBest(BaseModel):
+    target_score: str
+    patience: int
+
+
+class MonitorCheckpoint(BaseModel):
+    mode: Optional[Literal["eval", "train"]] = None
+    save_best: Optional[MonitorSaveBest] = None
+
+
+class MonitorConfig(BaseModel):
+    CheckPoint: MonitorCheckpoint
+
+
+# Full Config Schema
+class AppConfig(BaseModel):
+    data: DataConfig
+    transform: Optional[TransformConfig] = None
+    model: ModelConfig
+    pipeline: PipelineConfig
+    optimization: Optional[OptimizationConfig] = None
+    loss_function: LossFunctionConfig
+    metric: MetricConfig
+    monitor: Optional[MonitorConfig] = None
+
+
+# ConfigReader Class
 class ConfigReader:
-    @classmethod
-    def _init(cls, sections: Dict[str, dict]):
-        for section, content in sections.items():
-            setattr(cls, section, content)
+    _config: Optional[AppConfig] = None
 
     @classmethod
     def initialize(cls, config_path: str):
-        """Sets attributes for `ConfigReader` by reading configure file.
-
-        Input:
-        ------
-            config_path: str - The configure path.
-        """
-        if not config_path.endswith(".yml") and not config_path.endswith(".yaml"):
+        if not config_path.endswith((".yaml", ".yml")):
             raise ConfigException("Only support `yaml` or `yml` file.")
 
-        with open(config_path, "r") as stream:
-            cls._init(sections=yaml.safe_load(stream))
+        with open(config_path, "r") as f:
+            raw_config = yaml.safe_load(f)
 
-    @classmethod
-    def _check_required_field(cls, name: str, attr_fields: list):
-        """Check the permanent attributes of field.
-        If the config file includes incorrect attributes, then raises an error.
-        Input:
-        ------
-            name: str - The field name.
-            attr_fields: List - The list of attribute values of field.
-        """
-        REQUIRED_FIELD_MAPPING: dict = {
-            "data": ["image_dir", "coco_annotation_path"],
-            "model": ["name", "params"],
-            "loss_function": ["name", "params", "type"],
-            "optimization": ["name", "params"],
-            "metric": ["name", "params"],
-            # TODO [feature/evaluation_pipeline]: removes temporarily some required fields in pipeline to run eval pipelines
-            # Will resolve it in different PR
-            "pipeline": ["batch_size"],
-        }
-        required_fields: list = REQUIRED_FIELD_MAPPING.get(name, [])
-
-        is_subset: bool = set(required_fields).issubset(set(attr_fields))
-        if not is_subset:
-            error_msg = f"The required fields in `{name}`: {required_fields}"
-            raise ConfigException(message=error_msg)
-
-    @classmethod
-    def get_field(cls, name: str) -> any:
-        """Get the attributes of field in the config file.
-        Input:
-        ------
-            name: str - The field name.
-
-        Output:
-        ------
-            attr: any - The attribute of field.
-        """
-        VERIFIABLE_FIELD: list = [
-            "transform",
-            "data",
-            "model",
-            "optimization",
-            "loss_function",
-            "pipeline",
-            "metric",
-            "monitor",
-        ]
-        error_msg: str = ""
         try:
-            attr: any = getattr(cls, name)
-            if name in VERIFIABLE_FIELD:
-                if not isinstance(attr, dict):
-                    error_msg = f"The field `{name}` need to be parsed as a dictionary."
-                    raise ConfigException(message=error_msg)
+            cls._config = AppConfig(**raw_config)
+        except Exception as e:
+            raise ConfigException(f"Config validation failed: {str(e)}")
 
-                attr_fields: list = list(attr.keys())
-                cls._check_required_field(name=name, attr_fields=attr_fields)
-            return attr
+    @classmethod
+    def get_field(cls, name: str):
+        if not cls._config:
+            raise ConfigException("ConfigReader not initialized.")
 
+        try:
+            return getattr(cls._config, name)
         except AttributeError:
-            if name in ["transform", "monitor"]:
-                # Return None if config file does not include `transform` or `monitor` field
-                logging.warning(
-                    f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.",
-                )
-                return None
-            error_msg = f"The field `{name}` does not exist in the config file."
-            raise ConfigException(message=error_msg)
+            logging.warning(f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.")
+            return None
