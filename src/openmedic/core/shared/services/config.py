@@ -1,131 +1,182 @@
 import logging
-from typing import Dict, List, Optional, Union, Literal
+from typing import Dict, List, Optional, Union, Literal, Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class ConfigException(Exception):
-    """Custom exception"""
-
-    def __init__(self, message: str = "An error occurred in ConfigReader"):
-        self.message: str = message
-        super().__init__(self.message)
-
-# Pydantic Schemas for Sections
-class DataConfig(BaseModel):
+"""CONFIGURATION FIELDS"""
+# DATA FIELD
+class DataField(BaseModel):
     image_dir: str
     coco_annotation_path: str
 
 
-class ResizeTransform(BaseModel):
-    target_w: int
-    target_h: int
-    interpolation: Literal["INTER_LINEAR", "INTER_NEAREST"]
+# TRANSFORM FIELD
+class TransformField(BaseModel):
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
 
 
-class FlipTransform(BaseModel):
-    is_vertical: bool
-
-
-class TransformConfig(BaseModel):
-    Resize: Optional[ResizeTransform] = None
-    Flip: Optional[FlipTransform] = None
-
-
+# MODEL FIELD
 class ModelParams(BaseModel):
     n_channels: int
     n_classes: int
+    # Add the extra configuration: https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.extra
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+class ModelFieldTrainer(BaseModel):
+    name: str
+    params: ModelParams
+    # In training progress, if use `model_checkpoint` then it will apply transfer learning technique.
     model_checkpoint: Optional[str] = None
 
 
-class ModelConfig(BaseModel):
+class ModelFieldEvaluator(BaseModel):
     name: str
     params: ModelParams
+    # In evaluation progress, `model_checkpoint` is requisite.
+    model_checkpoint: str
 
 
-class PipelineConfig(BaseModel):
-    seed: Optional[int] = None
-    batch_size: int
-    is_shuffle: Optional[bool] = None
-    train_ratio: Optional[float] = None
-    n_epochs: Optional[int] = None
-    is_gpu: Optional[bool] = False
-    verbose: Optional[bool] = False
-
-
-class OptimizationConfig(BaseModel):
+class ModelFieldInferencer(BaseModel):
+    # TODO: need to check
     name: str
-    params: Dict[str, Union[float, int]]
+    params: ModelParams
+    # In evaluation progress, `model_checkpoint` is requisite.
+    model_checkpoint: str
 
 
-class LossFunctionConfig(BaseModel):
+# PIPELINE FIELD
+class PipelineFieldTrainer(BaseModel):
+    batch_size: int
+    n_epochs: int
+    train_ratio: float = Field(..., gt=0, le=1)
+    # Optional attributes
+    seed: int = 1
+    is_shuffle: bool = False
+    num_workers: int = 1
+    is_gpu: bool = True
+    verbose: bool = True
+
+
+class PipelineFieldEvaluator(BaseModel):
+    batch_size: int
+    # Optional attributes
+    num_workers: int = 1
+    is_gpu: bool = True
+    verbose: bool = True
+
+
+class PipelineFieldInferencer(BaseModel):
+    # TODO: Need to impelement here
+    pass
+
+
+# OPTIMIZATION FIELD
+class OptimizationField(BaseModel):
+    name: str
+    params: Dict[str, Any]
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# LOSS FUNCTION FIELD
+class LossFunctionField(BaseModel):
     name: str
     type: str
-    params: Dict[str, Union[str, List[float]]]
+    params: Dict[str, Any]
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
 
 
-class MetricParams(BaseModel):
-    epsilon: float
-    include_background: bool
-    n_classes: int
-
-
-class MetricConfig(BaseModel):
+# METRIC FIELD
+class MetricField(BaseModel):
     name: str
-    params: MetricParams
+    params: Dict[str, Any]
 
 
-class MonitorSaveBest(BaseModel):
-    target_score: str
-    patience: int
+# MONITOR FIELD
+class MonitorField(BaseModel):
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
 
 
-class MonitorCheckpoint(BaseModel):
-    mode: Optional[Literal["eval", "train"]] = None
-    save_best: Optional[MonitorSaveBest] = None
+"""MANIFEST ANATOMY"""
+class ManifestTrainer(BaseModel):
+    data: DataField
+    model: ModelFieldTrainer
+    pipeline: PipelineFieldTrainer
+    optimization: OptimizationField
+    loss_function: LossFunctionField
+    metric: MetricField
+
+    # Optional fields
+    transform: Optional[TransformField] = None
+    monitor: Optional[MonitorField] = None
 
 
-class MonitorConfig(BaseModel):
-    CheckPoint: MonitorCheckpoint
+class ManifestEvaluator(BaseModel):
+    data: DataField
+    model: ModelFieldEvaluator
+    pipeline: PipelineFieldEvaluator
+    loss_function: LossFunctionField
+    metric: MetricField
+
+    # Optional fields
+    transform: Optional[TransformField] = None
+    monitor: Optional[MonitorField] = None
 
 
-# Full Config Schema
-class AppConfig(BaseModel):
-    data: DataConfig
-    transform: Optional[TransformConfig] = None
-    model: ModelConfig
-    pipeline: PipelineConfig
-    optimization: Optional[OptimizationConfig] = None
-    loss_function: LossFunctionConfig
-    metric: MetricConfig
-    monitor: Optional[MonitorConfig] = None
+class ManifestInferencer(BaseModel):
+    # TODO: Need to implement here
+    pass
+
+
+
+"""CONFIGURATION READNING"""
+# TODO: Need to implement / modify the logics below.
+class ConfigException(Exception):
+    """Custom exception"""
+    def __init__(self, message: str = "An error occurred in ConfigReader"):
+        self.message: str = message
+        super().__init__(self.message)
 
 
 # ConfigReader Class
 class ConfigReader:
-    _config: Optional[AppConfig] = None
+    _manifest: Optional[Union[ManifestTrainer, ManifestEvaluator, ManifestInferencer]] = None
 
     @classmethod
-    def initialize(cls, config_path: str):
+    def initialize(cls, config_path: str, mode: str):
         if not config_path.endswith((".yaml", ".yml")):
             raise ConfigException("Only support `yaml` or `yml` file.")
 
         with open(config_path, "r") as f:
-            raw_config = yaml.safe_load(f)
+            config: dict = yaml.safe_load(f)
 
+        if mode not in ["train", "eval", "infer"]:
+            raise ConfigException(f"Does not support with `mode` {ManifestInferencer}")
+        
         try:
-            cls._config = AppConfig(**raw_config)
+            if mode == "train":
+                cls._manifest = ManifestTrainer(**config)
+            elif mode == "eval":
+                cls._manifest = ManifestEvaluator(**config)
+            else:
+                cls._manifest = ManifestInferencer(**config)
         except Exception as e:
             raise ConfigException(f"Config validation failed: {str(e)}")
 
     @classmethod
     def get_field(cls, name: str):
-        if not cls._config:
-            raise ConfigException("ConfigReader not initialized.")
+        if not cls._manifest:
+            raise ConfigException("ConfigReader is not initialized.")
 
         try:
-            return getattr(cls._config, name)
+            return getattr(cls._manifest, name)
         except AttributeError:
             logging.warning(f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.")
             return None
