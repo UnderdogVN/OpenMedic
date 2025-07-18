@@ -2,104 +2,147 @@ import logging
 from typing import Dict, List, Optional, Union, Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
+"""CONFIGURATION FIELDS"""
+# DATA FIELD
+class DataField(BaseModel):
+    image_dir: str
+    coco_annotation_path: str
+
+
+# TRANSFORM FIELD
+class TransformField(BaseModel):
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# MODEL FIELD
+class ModelParams(BaseModel):
+    n_channels: int
+    n_classes: int
+    # Add the extra configuration: https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.extra
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+class ModelFieldTrainer(BaseModel):
+    name: str
+    params: ModelParams
+    # In training progress, if use `model_checkpoint` then it will apply transfer learning technique.
+    model_checkpoint: Optional[str]
+
+
+class ModelFieldEvaluator(BaseModel):
+    name: str
+    params: ModelParams
+    # In evaluation progress, `model_checkpoint` is requisite.
+    model_checkpoint: str
+
+
+class ModelFieldInferencer(BaseModel):
+    # TODO: need to check
+    name: str
+    params: ModelParams
+    # In evaluation progress, `model_checkpoint` is requisite.
+    model_checkpoint: str
+
+
+# PIPELINE FIELD
+class PipelineFieldTrainer(BaseModel):
+    batch_size: int
+    n_epochs: int
+    train_ratio: float = Field(..., gt=0, le=1)
+    # Optional attributes
+    seed: int = 1
+    is_shuffle: bool = False
+    num_workers: int = 1
+    is_gpu: bool = True
+    verbose: bool = True
+
+
+class PipelineFieldEvaluator(BaseModel):
+    batch_size: int
+    # Optional attributes
+    num_workers: int = 1
+    is_gpu: bool = True
+    verbose: bool = True
+
+
+class PipelineFieldInferencer(BaseModel):
+    # TODO: Need to impelement here
+    pass
+
+
+# OPTIMIZATION FIELD
+class OptimizationField(BaseModel):
+    name: str
+    params: Dict[str, any]
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# LOSS FUNCTION FIELD
+class LossFunctionField(BaseModel):
+    name: str
+    type: str
+    params: Dict[str, any]
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# METRIC FIELD
+class MetricField(BaseModel):
+    name: str
+    params: Dict[str, any]
+
+
+# MONITOR FIELD
+class MonitorField(BaseModel):
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+"""MANIFEST ANATOMY"""
+class ManifestTrainer(BaseModel):
+    data: DataField
+    model: ModelFieldTrainer
+    pipeline: PipelineFieldTrainer
+    optimization: OptimizationField
+    loss_function: LossFunctionField
+    metric: MetricField
+
+    # Optional fields
+    transform: Optional[TransformField] = None
+    monitor: Optional[MonitorField] = None
+
+
+class ManifestEvaluator(BaseModel):
+    data: DataField
+    model: ModelFieldEvaluator
+    pipeline: PipelineFieldEvaluator
+    loss_function: LossFunctionField
+    metric: MetricField
+
+    # Optional fields
+    transform: Optional[TransformField] = None
+    monitor: Optional[MonitorField] = None
+
+
+class ManifestInferencer(BaseModel):
+    # TODO: Need to implement here
+    pass
+
+
+
+"""CONFIGURATION READNING"""
 class ConfigException(Exception):
     """Custom exception"""
 
     def __init__(self, message: str = "An error occurred in ConfigReader"):
         self.message: str = message
         super().__init__(self.message)
-
-# Pydantic Schemas for Sections
-class DataConfig(BaseModel):
-    image_dir: str
-    coco_annotation_path: str
-
-
-class ResizeTransform(BaseModel):
-    target_w: int
-    target_h: int
-    interpolation: Literal["INTER_LINEAR", "INTER_NEAREST"]
-
-
-class FlipTransform(BaseModel):
-    is_vertical: bool
-
-
-class TransformConfig(BaseModel):
-    Resize: Optional[ResizeTransform] = None
-    Flip: Optional[FlipTransform] = None
-
-
-class ModelParams(BaseModel):
-    n_channels: int
-    n_classes: int
-    model_checkpoint: Optional[str] = None
-
-
-class ModelConfig(BaseModel):
-    name: str
-    params: ModelParams
-
-
-class PipelineConfig(BaseModel):
-    seed: Optional[int] = None
-    batch_size: int
-    is_shuffle: Optional[bool] = None
-    train_ratio: Optional[float] = None
-    n_epochs: Optional[int] = None
-    is_gpu: Optional[bool] = False
-    verbose: Optional[bool] = False
-
-
-class OptimizationConfig(BaseModel):
-    name: str
-    params: Dict[str, Union[float, int]]
-
-
-class LossFunctionConfig(BaseModel):
-    name: str
-    type: str
-    params: Dict[str, Union[str, List[float]]]
-
-
-class MetricParams(BaseModel):
-    epsilon: float
-    include_background: bool
-    n_classes: int
-
-
-class MetricConfig(BaseModel):
-    name: str
-    params: MetricParams
-
-
-class MonitorSaveBest(BaseModel):
-    target_score: str
-    patience: int
-
-
-class MonitorCheckpoint(BaseModel):
-    mode: Optional[Literal["eval", "train"]] = None
-    save_best: Optional[MonitorSaveBest] = None
-
-
-class MonitorConfig(BaseModel):
-    CheckPoint: MonitorCheckpoint
-
-
-# Full Config Schema
-class AppConfig(BaseModel):
-    data: DataConfig
-    transform: Optional[TransformConfig] = None
-    model: ModelConfig
-    pipeline: PipelineConfig
-    optimization: Optional[OptimizationConfig] = None
-    loss_function: LossFunctionConfig
-    metric: MetricConfig
-    monitor: Optional[MonitorConfig] = None
 
 
 # ConfigReader Class
