@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore")
 @helper.montior
 def run(*, config_path: str) -> dict:
     logging.info(f"[train][run]: Planning train pipeline...")
-    services.ConfigReader.initialize(config_path=config_path)
+    services.ConfigReader.initialize(config_path=config_path, mode="train")
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_train()
     now: datetime = plans.OpenMedicPipelineResult.current_time
