@@ -68,6 +68,7 @@ class PipelineFieldEvaluator(BaseModel):
     num_workers: int = 1
     is_gpu: bool = True
     verbose: bool = True
+    is_shuffle: bool = False
 
 
 class PipelineFieldInferencer(BaseModel):
@@ -171,12 +172,13 @@ class ConfigReader:
             raise ConfigException(f"Config validation failed: {str(e)}")
 
     @classmethod
-    def get_field(cls, name: str):
+    def get_field(cls, name: str) -> dict:
         if not cls._manifest:
             raise ConfigException("ConfigReader is not initialized.")
 
         try:
-            return getattr(cls._manifest, name)
+            field: BaseModel = getattr(cls._manifest, name)
+            return field.model_dump(exclude_none=True)
         except AttributeError:
             logging.warning(f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.")
             return None
