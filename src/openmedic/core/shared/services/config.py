@@ -1,102 +1,174 @@
 import logging
-from typing import Dict
+from typing import Dict, List, Optional, Union, Literal
 
 import yaml
+from pydantic import BaseModel, ConfigDict, Field
 
 
+"""CONFIGURATION FIELDS"""
+# DATA FIELD
+class DataField(BaseModel):
+    image_dir: str
+    coco_annotation_path: str
+
+
+# TRANSFORM FIELD
+class TransformField(BaseModel):
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# MODEL FIELD
+class ModelParams(BaseModel):
+    n_channels: int
+    n_classes: int
+    # Add the extra configuration: https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.extra
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+class ModelFieldTrainer(BaseModel):
+    name: str
+    params: ModelParams
+    # In training progress, if use `model_checkpoint` then it will apply transfer learning technique.
+    model_checkpoint: Optional[str]
+
+
+class ModelFieldEvaluator(BaseModel):
+    name: str
+    params: ModelParams
+    # In evaluation progress, `model_checkpoint` is requisite.
+    model_checkpoint: str
+
+
+class ModelFieldInferencer(BaseModel):
+    # TODO: need to check
+    name: str
+    params: ModelParams
+    # In evaluation progress, `model_checkpoint` is requisite.
+    model_checkpoint: str
+
+
+# PIPELINE FIELD
+class PipelineFieldTrainer(BaseModel):
+    batch_size: int
+    n_epochs: int
+    train_ratio: float = Field(..., gt=0, le=1)
+    # Optional attributes
+    seed: int = 1
+    is_shuffle: bool = False
+    num_workers: int = 1
+    is_gpu: bool = True
+    verbose: bool = True
+
+
+class PipelineFieldEvaluator(BaseModel):
+    batch_size: int
+    # Optional attributes
+    num_workers: int = 1
+    is_gpu: bool = True
+    verbose: bool = True
+
+
+class PipelineFieldInferencer(BaseModel):
+    # TODO: Need to impelement here
+    pass
+
+
+# OPTIMIZATION FIELD
+class OptimizationField(BaseModel):
+    name: str
+    params: Dict[str, any]
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# LOSS FUNCTION FIELD
+class LossFunctionField(BaseModel):
+    name: str
+    type: str
+    params: Dict[str, any]
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+# METRIC FIELD
+class MetricField(BaseModel):
+    name: str
+    params: Dict[str, any]
+
+
+# MONITOR FIELD
+class MonitorField(BaseModel):
+    # Behaviour of pydantic can be controlled via the model_config attribute on a BaseModel. https://docs.pydantic.dev/2.0/usage/model_config/
+    model_config = ConfigDict(extra="allow")
+
+
+"""MANIFEST ANATOMY"""
+class ManifestTrainer(BaseModel):
+    data: DataField
+    model: ModelFieldTrainer
+    pipeline: PipelineFieldTrainer
+    optimization: OptimizationField
+    loss_function: LossFunctionField
+    metric: MetricField
+
+    # Optional fields
+    transform: Optional[TransformField] = None
+    monitor: Optional[MonitorField] = None
+
+
+class ManifestEvaluator(BaseModel):
+    data: DataField
+    model: ModelFieldEvaluator
+    pipeline: PipelineFieldEvaluator
+    loss_function: LossFunctionField
+    metric: MetricField
+
+    # Optional fields
+    transform: Optional[TransformField] = None
+    monitor: Optional[MonitorField] = None
+
+
+class ManifestInferencer(BaseModel):
+    # TODO: Need to implement here
+    pass
+
+
+
+"""CONFIGURATION READNING"""
 class ConfigException(Exception):
-    """Customs exception"""
+    """Custom exception"""
 
     def __init__(self, message: str = "An error occurred in ConfigReader"):
         self.message: str = message
         super().__init__(self.message)
 
 
+# ConfigReader Class
 class ConfigReader:
-    @classmethod
-    def _init(cls, sections: Dict[str, dict]):
-        for section, content in sections.items():
-            setattr(cls, section, content)
+    _config: Optional[AppConfig] = None
 
     @classmethod
     def initialize(cls, config_path: str):
-        """Sets attributes for `ConfigReader` by reading configure file.
-
-        Input:
-        ------
-            config_path: str - The configure path.
-        """
-        if not config_path.endswith(".yml") and not config_path.endswith(".yaml"):
+        if not config_path.endswith((".yaml", ".yml")):
             raise ConfigException("Only support `yaml` or `yml` file.")
 
-        with open(config_path, "r") as stream:
-            cls._init(sections=yaml.safe_load(stream))
+        with open(config_path, "r") as f:
+            raw_config = yaml.safe_load(f)
 
-    @classmethod
-    def _check_required_field(cls, name: str, attr_fields: list):
-        """Check the permanent attributes of field.
-        If the config file includes incorrect attributes, then raises an error.
-        Input:
-        ------
-            name: str - The field name.
-            attr_fields: List - The list of attribute values of field.
-        """
-        REQUIRED_FIELD_MAPPING: dict = {
-            "data": ["image_dir", "coco_annotation_path"],
-            "model": ["name", "params"],
-            "loss_function": ["name", "params", "type"],
-            "optimization": ["name", "params"],
-            "metric": ["name", "params"],
-            # TODO [feature/evaluation_pipeline]: removes temporarily some required fields in pipeline to run eval pipelines
-            # Will resolve it in different PR
-            "pipeline": ["batch_size"],
-        }
-        required_fields: list = REQUIRED_FIELD_MAPPING.get(name, [])
-
-        is_subset: bool = set(required_fields).issubset(set(attr_fields))
-        if not is_subset:
-            error_msg = f"The required fields in `{name}`: {required_fields}"
-            raise ConfigException(message=error_msg)
-
-    @classmethod
-    def get_field(cls, name: str) -> any:
-        """Get the attributes of field in the config file.
-        Input:
-        ------
-            name: str - The field name.
-
-        Output:
-        ------
-            attr: any - The attribute of field.
-        """
-        VERIFIABLE_FIELD: list = [
-            "transform",
-            "data",
-            "model",
-            "optimization",
-            "loss_function",
-            "pipeline",
-            "metric",
-            "monitor",
-        ]
-        error_msg: str = ""
         try:
-            attr: any = getattr(cls, name)
-            if name in VERIFIABLE_FIELD:
-                if not isinstance(attr, dict):
-                    error_msg = f"The field `{name}` need to be parsed as a dictionary."
-                    raise ConfigException(message=error_msg)
+            cls._config = AppConfig(**raw_config)
+        except Exception as e:
+            raise ConfigException(f"Config validation failed: {str(e)}")
 
-                attr_fields: list = list(attr.keys())
-                cls._check_required_field(name=name, attr_fields=attr_fields)
-            return attr
+    @classmethod
+    def get_field(cls, name: str):
+        if not cls._config:
+            raise ConfigException("ConfigReader not initialized.")
 
+        try:
+            return getattr(cls._config, name)
         except AttributeError:
-            if name in ["transform", "monitor"]:
-                # Return None if config file does not include `transform` or `monitor` field
-                logging.warning(
-                    f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.",
-                )
-                return None
-            error_msg = f"The field `{name}` does not exist in the config file."
-            raise ConfigException(message=error_msg)
+            logging.warning(f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.")
+            return None
