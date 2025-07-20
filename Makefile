@@ -8,4 +8,4 @@ reformat_code:
 	isort . --profile black
 
 run_tests:
-	pytest tests 
+	pytest tests
