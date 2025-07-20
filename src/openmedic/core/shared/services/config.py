@@ -151,13 +151,7 @@ class ConfigReader:
     _manifest: Optional[Union[ManifestTrainer, ManifestEvaluator, ManifestInferencer]] = None
 
     @classmethod
-    def initialize(cls, config_path: str, mode: str):
-        if not config_path.endswith((".yaml", ".yml")):
-            raise ConfigException("Only support `yaml` or `yml` file.")
-
-        with open(config_path, "r") as f:
-            config: dict = yaml.safe_load(f)
-
+    def init_manifest(cls, config: dict, mode: str):
         if mode not in ["train", "eval", "infer"]:
             raise ConfigException(f"Does not support with `mode` {ManifestInferencer}")
         
@@ -170,7 +164,20 @@ class ConfigReader:
                 cls._manifest = ManifestInferencer(**config)
         except Exception as e:
             raise ConfigException(f"Config validation failed: {str(e)}")
+        
+    @classmethod
+    def initialize(cls, config_path: str, mode: str):
+        if not config_path.endswith((".yaml", ".yml")):
+            raise ConfigException("Only support `yaml` or `yml` file.")
 
+        with open(config_path, "r") as f:
+            config: dict = yaml.safe_load(f)
+
+        cls.init_manifest(
+            config=config,
+            mode=mode
+        )
+        
     @classmethod
     def get_field(cls, name: str) -> dict:
         if not cls._manifest:
