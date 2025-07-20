@@ -1,11 +1,12 @@
 import logging
-from typing import Dict, List, Optional, Union, Literal, Any
+from typing import Any, Dict, Optional, Union
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
-
 """CONFIGURATION FIELDS"""
+
+
 # DATA FIELD
 class DataField(BaseModel):
     image_dir: str
@@ -106,6 +107,8 @@ class MonitorField(BaseModel):
 
 
 """MANIFEST ANATOMY"""
+
+
 class ManifestTrainer(BaseModel):
     data: DataField
     model: ModelFieldTrainer
@@ -136,11 +139,13 @@ class ManifestInferencer(BaseModel):
     pass
 
 
-
 """CONFIGURATION READNING"""
+
+
 # TODO: Need to implement / modify the logics below.
 class ConfigException(Exception):
     """Custom exception"""
+
     def __init__(self, message: str = "An error occurred in ConfigReader"):
         self.message: str = message
         super().__init__(self.message)
@@ -148,13 +153,15 @@ class ConfigException(Exception):
 
 # ConfigReader Class
 class ConfigReader:
-    _manifest: Optional[Union[ManifestTrainer, ManifestEvaluator, ManifestInferencer]] = None
+    _manifest: Optional[
+        Union[ManifestTrainer, ManifestEvaluator, ManifestInferencer]
+    ] = None
 
     @classmethod
     def init_manifest(cls, config: dict, mode: str):
         if mode not in ["train", "eval", "infer"]:
             raise ConfigException(f"Does not support with `mode` {ManifestInferencer}")
-        
+
         try:
             if mode == "train":
                 cls._manifest = ManifestTrainer(**config)
@@ -164,7 +171,7 @@ class ConfigReader:
                 cls._manifest = ManifestInferencer(**config)
         except Exception as e:
             raise ConfigException(f"Config validation failed: {str(e)}")
-        
+
     @classmethod
     def initialize(cls, config_path: str, mode: str):
         if not config_path.endswith((".yaml", ".yml")):
@@ -173,11 +180,8 @@ class ConfigReader:
         with open(config_path, "r") as f:
             config: dict = yaml.safe_load(f)
 
-        cls.init_manifest(
-            config=config,
-            mode=mode
-        )
-        
+        cls.init_manifest(config=config, mode=mode)
+
     @classmethod
     def get_field(cls, name: str) -> dict:
         if not cls._manifest:
@@ -187,5 +191,7 @@ class ConfigReader:
             field: BaseModel = getattr(cls._manifest, name)
             return field.model_dump(exclude_none=True)
         except AttributeError:
-            logging.warning(f"[ConfigReader][get_field]: The field `{name}` is not set in the config file.")
+            logging.warning(
+                f"[ConfigReader][get_field]: The field `{name}` is not set in the config file."
+            )
             return None
