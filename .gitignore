@@ -4,3 +4,4 @@ uv.lock
 **/__pycache__/**
 SUMMARY.md
 TESTS.md
+**/.DS_Store
