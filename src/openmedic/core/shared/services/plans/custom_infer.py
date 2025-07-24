@@ -37,6 +37,12 @@ class OpenMedicInferencer:
         self.inference_info: dict = ConfigReader.get_field(name="pipeline")
         self.transform_ops = self._plan_transform()
 
+        if self.inference_info.get("mask_threshold") is None:
+            self.mask_threshold = 0.3
+            logging.info(
+                f"Mask threshold is not set in config, using default: {self.mask_threshold}",
+            )
+
     @classmethod
     def initialize_with_config(cls):
         """Initializes the inferencer using model configuration.
@@ -53,7 +59,6 @@ class OpenMedicInferencer:
         if model_checkpoint:
             model.load_state_dict(torch.load(model_checkpoint))
 
-        model.eval()
         return cls(model)
 
     def _plan_transform(self) -> list:
@@ -114,8 +119,8 @@ class OpenMedicInferencer:
                 2,
                 0,
                 1,
-            )  # Convert HWC to CHW
-            image_copy = image_copy.float()  # Convert to float tensor
+            )
+            image_copy = image_copy.float()
             image_copy = image_copy.unsqueeze(0)
         elif image_copy.ndim != 4:
             raise ValueError("Processed image must be 3D or 4D after conversion.")
@@ -125,6 +130,9 @@ class OpenMedicInferencer:
         return image_copy
 
     def inference(self, image: torch.Tensor) -> torch.Tensor:
+        if self.inference_info["is_gpu"]:
+            self.model = self.model.to(torch.device("cuda"))
+        self.model.eval()
         with torch.no_grad():
             output = self.model(image)
         return output
@@ -154,7 +162,7 @@ class OpenMedicInferencer:
         for y in range(height):
             for x in range(width):
                 selected_colors = channel_colors[
-                    output[0, :, y, x] > self.inference_info.get("mask_threshold", 0.3)
+                    output[0, :, y, x] > self.mask_threshold
                 ]
 
                 if len(selected_colors) > 0:
