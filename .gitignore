@@ -2,4 +2,6 @@
 openmedic.egg-info
 uv.lock
 **/__pycache__/**
-.openmedic
+SUMMARY.md
+TESTS.md
+**/.DS_Store

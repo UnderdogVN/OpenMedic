@@ -38,76 +38,6 @@ class OpenMedicPipelineBase(ABC):
         pass
 
 
-class OpenMedicPipeline:
-    """OpenMedicPipeline manage to read and populate information for train/eval/inference pipeline."""
-
-    @classmethod
-    def _get_all_pipeline_info(cls) -> dict:
-        return ConfigReader.get_field(name="pipeline")
-
-    @classmethod
-    def _get_train_pipeline_info(cls, pipeline_info: dict) -> dict:
-        # Required fields
-        batch_size: int = pipeline_info["batch_size"]
-        n_epochs: int = pipeline_info["n_epochs"]
-        train_ratio: float = pipeline_info["train_ratio"]
-        if train_ratio > 1.0:
-            OpenMedicExeception(
-                f"[OpenMedicManager][_populate_objects]: train_ratio need to lower than 1.0",
-            )
-
-        # Optional fields
-        seed: int = pipeline_info.get("seed", 1)
-        is_shuffle: bool = pipeline_info.get("is_shuffle", False)
-        num_workers: int = pipeline_info.get("num_workers", 1)
-        is_gpu: bool = pipeline_info.get("is_gpu", True)
-        verbose: bool = pipeline_info.get("verbose", True)
-
-        return {
-            "batch_size": batch_size,
-            "n_epochs": n_epochs,
-            "train_ratio": train_ratio,
-            "is_shuffle": is_shuffle,
-            "num_workers": num_workers,
-            "seed": seed,
-            "is_gpu": is_gpu,
-            "verbose": verbose,
-        }
-
-    @classmethod
-    def _get_eval_pipeline_info(cls, pipeline_info: dict) -> dict:
-        # Required fields
-        batch_size: int = pipeline_info["batch_size"]
-
-        # Optional fields
-        is_shuffle: bool = pipeline_info.get("is_shuffle", False)
-        num_workers: int = pipeline_info.get("num_workers", 1)
-        is_gpu: bool = pipeline_info.get("is_gpu", True)
-        verbose: bool = pipeline_info.get("verbose", True)
-
-        return {
-            "batch_size": batch_size,
-            "is_shuffle": is_shuffle,
-            "num_workers": num_workers,
-            "is_gpu": is_gpu,
-            "verbose": verbose,
-        }
-
-    @classmethod
-    def get_pipeline_info(cls, mode: Optional[str] = None) -> dict:
-        pipeline_info: dict = cls._get_all_pipeline_info()
-        if not mode:
-            return pipeline_info
-
-        method_name = f"_get_{mode}_pipeline_info"
-        method: any = getattr(cls, method_name, None)
-        if not method:
-            raise OpenMedicExeception(
-                f"[OpenMedicPipeline][get_pipeline_config]: No method found `{method_name}`",
-            )
-        return method(pipeline_info=pipeline_info)
-
-
 class OpenMedicPipelineResult:
     """OpenMedicPipelineResult manages all the results (loss, metrics, ...) and informations when running pipelines."""
 
@@ -330,7 +260,7 @@ class OpenMedicManager:
         """
         self._mode = "train"
         self.open_dataset, self.open_trainer = self._get_objects(mode=self._mode)
-        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode=self._mode)
+        self.pipeline_info = ConfigReader.get_field(name="pipeline")
         self.data_info = ConfigReader.get_field(name="data")
         logging.info(
             f"[OpenMedicManager][plan_train]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",
@@ -451,7 +381,7 @@ class OpenMedicManager:
         """
         self._mode = "eval"
         self.open_dataset, self.open_evaluator = self._get_objects(mode=self._mode)
-        self.pipeline_info = OpenMedicPipeline.get_pipeline_info(mode=self._mode)
+        self.pipeline_info = ConfigReader.get_field(name="pipeline")
         self.data_info = ConfigReader.get_field(name="data")
         logging.info(
             f"[OpenMedicManager][plan_eval]: Target dataset with: \n\tImage Directory: {self.data_info['image_dir']}\n\tCOCO File: {self.data_info['coco_annotation_path']}",

@@ -24,7 +24,7 @@ def run(*, config_path: str) -> dict:
         dict - Returns evaluation results with timestamp.
     """
     logging.info(f"[eval][run]: Planning evaluation pipeline...")
-    services.ConfigReader.initialize(config_path=config_path)
+    services.ConfigReader.initialize(config_path=config_path, mode="eval")
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_eval()
     now: datetime = plans.OpenMedicPipelineResult.current_time
