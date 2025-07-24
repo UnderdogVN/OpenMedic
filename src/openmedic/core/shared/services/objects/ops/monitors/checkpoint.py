@@ -79,7 +79,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         patience: Optional[int] = None
 
         logging.info(
-            f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}"
+            f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}",
         )
 
         if mode == "eval":
