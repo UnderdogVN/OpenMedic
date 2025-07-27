@@ -288,6 +288,10 @@ class OpenMedicManager:
         if self.pipeline_info["is_gpu"]:
             self.open_model = self.open_model.to(device=self.device)
 
+        # Initialize evaluator for validation during training
+        self.open_evaluator = self.open_trainer
+        logging.info("[OpenMedicManager][plan_train]: Evaluator initialized as trainer for validation")
+
         OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
     def activate_train(self):
@@ -422,6 +426,7 @@ class OpenMedicManager:
             open_manager.monitor_per_epoch()
         ```
         """
+        logging.info(f"[OpenMedicManager][execute_eval_per_epoch]: Method called for epoch {epoch}")
         step: int
         images: torch.Tensor
         gts: torch.Tensor
@@ -430,14 +435,21 @@ class OpenMedicManager:
         eval_metric_scores: list = []
         eval_losses: list = []
 
-        # Validate that evaluator is available
-        if self.open_evaluator is None:
-            raise OpenMedicExeception(
-                "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first."
-            )
-
-        # Use eval_loader for evaluation
-        data_loader = self.eval_loader
+        # Use val_loader for validation during training, eval_loader for standalone evaluation
+        if self._mode == "train":
+            # During training, use validation dataset
+            if self.val_loader is None:
+                raise OpenMedicExeception(
+                    "[OpenMedicManager][execute_eval_per_epoch]: val_loader is None. Please ensure plan_train() is called first."
+                )
+            data_loader = self.val_loader
+        else:
+            # During standalone evaluation, use evaluator
+            if self.open_evaluator is None:
+                raise OpenMedicExeception(
+                    "[OpenMedicManager][execute_eval_per_epoch]: open_evaluator is None. Please ensure plan_eval() is called first."
+                )
+            data_loader = self.eval_loader
 
         with torch.no_grad():
             for step, (images, gts) in enumerate(data_loader, 1):

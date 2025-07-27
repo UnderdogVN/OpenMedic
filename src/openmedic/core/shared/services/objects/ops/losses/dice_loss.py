@@ -10,12 +10,12 @@ class MultiClassDiceLoss(lf.OpenMedicLossOpBase):
         super().__init__()
         self.n_classes: int = n_classes
         self.smooth: float = smooth
-        self.include_background: int = include_background
+        self.include_background: bool = include_background  # Fixed: should be bool
 
     def forward(self, gts_pred: torch.Tensor, gts: torch.Tensor) -> torch.Tensor:
         """
-        gts_pred: [B, C, H, W] — raw model outputs (C = number of foreground classes)
-        gts: [B, H, W] — class labels in [0, C-1], background/ignore = `ignore_index` (e.g., 255)
+        gts_pred: [B, C, H, W] — raw model outputs (C = number of classes)
+        gts: [B, H, W] — class labels in [0, C-1]
         """
         gts_pred_shapes: tuple = gts_pred.shape
         gts_shapes: tuple = gts.shape
@@ -26,40 +26,38 @@ class MultiClassDiceLoss(lf.OpenMedicLossOpBase):
             len(gts_shapes) == 3
         ), f"`gts_shapes.shape` expect to 3 but return {len(gts_shapes)}"
 
-        # valid_mask: exclude ignore_index (e.g., 255)
-        valid_mask: torch.Tensor
-        if not self.include_background:
-            valid_mask = gts != 0
-        else:
-            valid_mask = gts
+        # Ensure ground truth values are within valid range
+        assert gts.min() >= 0 and gts.max() < self.n_classes, f"Ground truth values should be in [0, {self.n_classes-1}]"
 
-        # Clone and safely replace invalid values for one-hot
-        safe_targets: torch.Tensor = gts.clone()
-        safe_targets[~valid_mask] = 0  # won't matter; masked out later
+        # One-hot encode ground truth: [B, H, W] → [B, C, H, W]
+        one_hot: torch.Tensor = F.one_hot(gts, num_classes=self.n_classes).permute(0, 3, 1, 2).float()
 
-        # One-hot encode: [B, H, W] → [B, H, W, C] → [B, C, H, W]
-        one_hot: torch.Tensor = (
-            F.one_hot(safe_targets, num_classes=self.n_classes)
-            .permute(0, 3, 1, 2)
-            .float()
-        )
-
-        # Compute softmax probabilities
+        # Compute softmax probabilities from model output (differentiable)
         probs: torch.Tensor = F.softmax(gts_pred, dim=1)
 
-        # Apply mask
-        valid_mask = valid_mask.unsqueeze(1).float()
-        probs = probs * valid_mask
-        one_hot = one_hot * valid_mask
+        # Determine which classes to include in loss computation
+        if not self.include_background:
+            # Exclude background class (class 0) from loss computation
+            class_indices = list(range(1, self.n_classes))  # Skip background class
+            one_hot = one_hot[:, class_indices, :, :]
+            probs = probs[:, class_indices, :, :]
+        else:
+            # Include all classes including background
+            class_indices = list(range(self.n_classes))
 
-        # Compute Dice
-        dims: tuple = (0, 2, 3)
+        # Compute Dice coefficient for each class (differentiable)
+        dims: tuple = (0, 2, 3)  # Sum over batch, height, width dimensions
+        
+        # Intersection: sum of element-wise product
         intersection: torch.Tensor = (probs * one_hot).sum(dim=dims)
-        cardinality: torch.tensor = probs.sum(dim=dims) + one_hot.sum(dim=dims)
-        dice: torch.Tensor = (2.0 * intersection + self.smooth) / (
-            cardinality + self.smooth
-        )
-
+        
+        # Cardinality: sum of probabilities + sum of ground truth
+        cardinality: torch.Tensor = probs.sum(dim=dims) + one_hot.sum(dim=dims)
+        
+        # Dice coefficient with smoothing
+        dice: torch.Tensor = (2.0 * intersection + self.smooth) / (cardinality + self.smooth)
+        
+        # Return 1 - dice.mean() (lower is better for loss)
         return 1 - dice.mean()
 
 
