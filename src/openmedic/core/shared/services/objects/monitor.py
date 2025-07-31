@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict
+from tensorboard import TensorBoardLogger  # 👈 Import logger
 
 
 class OpenMedicMonitorOpBase(ABC):
@@ -29,6 +30,9 @@ class OpenMedicMonitorOpError(Exception):
 
 
 class OpenMedicMonitor:
+    logger = TensorBoardLogger(log_dir="runs/openmedic")
+    epoch_history: List[Dict] = []
+
     def __call__() -> List[object]:
         pass
 
@@ -43,4 +47,23 @@ class OpenMedicMonitor:
             return getattr(cls, op_name)
         except AttributeError:
             error_msg = f"The {op_name} operation does not exist."
-            raise OpenMedicMonitorOpError(message=error_msg)
+            raise OpenMedicMonitorOpError(error_msg)
+
+    @classmethod
+    def log_epoch(cls, result: Dict):
+        """Log scalar metrics + save epoch results"""
+        cls.logger.log_metrics(
+            {k: v for k, v in result.items() if isinstance(v, (int, float))},
+            epoch=result.get("epoch", cls.logger.epoch)
+        )
+        cls.logger.save_epoch_result(result)
+        cls.logger.step_epoch()
+        cls.epoch_history.append(result)
+
+    @classmethod
+    def close(cls):
+        cls.logger.close()
+
+    @classmethod
+    def get_all_results(cls) -> List[Dict]:
+        return cls.epoch_history

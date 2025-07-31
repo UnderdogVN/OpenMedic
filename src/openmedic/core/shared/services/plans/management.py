@@ -363,6 +363,14 @@ class OpenMedicManager:
             val=train_metric_score_per_step,
         )
 
+        # TensorBoard logging
+        from openmedic.core.shared.services.objects.monitor import OpenMedicMonitor
+        OpenMedicMonitor.log_epoch({
+            "epoch": epoch,
+            "train_loss": train_loss_per_step,
+            "train_metric": train_metric_score_per_step
+        })
+
     def monitor_per_epoch(self, **kwargs):
         """Execute monitor process per epoch.
         Update latest state `open_model` to OpenMedicPipelineResult.
@@ -470,3 +478,11 @@ class OpenMedicManager:
         OpenMedicPipelineResult.update(
             attr_name="eval_metric_scores", val=eval_metric_score_per_step
         )
+
+        # TensorBoard logging
+        from openmedic.core.shared.services.objects.monitor import OpenMedicMonitor
+        OpenMedicMonitor.log_epoch({
+            "epoch": epoch,
+            "eval_loss": eval_loss_per_step,
+            "eval_metric": eval_metric_score_per_step
+        })
