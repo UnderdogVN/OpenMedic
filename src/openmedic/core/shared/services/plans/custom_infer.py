@@ -35,9 +35,8 @@ class OpenMedicInferencer:
     def __init__(self, model: OpenMedicModelBase):
         self.model: OpenMedicModelBase = model
         self.inference_info: dict = ConfigReader.get_field(name="pipeline")
-        self.transform_ops = self._plan_transform()
-        self.mask_threshold = self.inference_info["mask_threshold"]
-        
+        self.transform_ops: list = self._plan_transform()
+        self.mask_threshold: float = self.inference_info["mask_threshold"]
 
     @classmethod
     def initialize_with_config(cls):
@@ -90,15 +89,15 @@ class OpenMedicInferencer:
 
     def read_input(self, input_path: str) -> np.ndarray:
         logging.info(f"[inferencer][read_input]: Reading input from {input_path}")
-        image = cv2.imread(input_path)
+        image: np.ndarray = cv2.imread(input_path)
         if image is None:
             raise ValueError(f"Could not read image from {input_path}")
         return image
 
     def preprocess(self, image: np.ndarray) -> torch.Tensor:
-        image_copy = image.copy()
+        image_copy: np.ndarray = image.copy()
         if isinstance(image, np.ndarray):
-            image_copy = cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB)
+            image_copy: np.ndarray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2RGB)
         else:
             raise TypeError("Input image must be a numpy array or a torch tensor.")
 
@@ -111,30 +110,31 @@ class OpenMedicInferencer:
                 )
         # Add batch dimension if missing
         if image_copy.ndim == 3:
-            image_copy = torch.from_numpy(image_copy).permute(
+            image_copy: torch.Tensor = torch.from_numpy(image_copy).permute(
                 2,
                 0,
                 1,
             )
-            image_copy = image_copy.float()
-            image_copy = image_copy.unsqueeze(0)
+            image_copy: torch.Tensor = image_copy.float()
+            image_copy: torch.Tensor = image_copy.unsqueeze(0)
         elif image_copy.ndim != 4:
             raise ValueError("Processed image must be 3D or 4D after conversion.")
 
         if self.inference_info["is_gpu"]:
-            image_copy = image_copy.to(torch.device("cuda"))
+            image_copy: torch.Tensor = image_copy.to(torch.device("cuda"))
         return image_copy
 
     def inference(self, image: torch.Tensor) -> torch.Tensor:
         if self.inference_info["is_gpu"]:
-            self.model = self.model.to(torch.device("cuda"))
+            self.model: OpenMedicModelBase = self.model.to(torch.device("cuda"))
         self.model.eval()
         with torch.no_grad():
-            output = self.model(image)
+            output: torch.Tensor = self.model(image)
         return output
 
     def postprocess(self, output: torch.Tensor) -> np.ndarray:
         colors = [
+            [0, 0, 0],  # Background
             [255, 0, 0],
             [0, 255, 0],
             [0, 0, 255],
@@ -151,14 +151,14 @@ class OpenMedicInferencer:
             [0, 0, 128],
         ]
 
-        output = output.cpu().numpy()
+        output: np.ndarray = output.cpu().numpy()
         _, channels, height, width = output.shape
-        channel_colors = np.array(colors[:channels], dtype=np.float32)
+        channel_colors: np.ndarray = np.array(colors[:channels], dtype=np.float32)
 
-        pred_image = np.ones((height, width, 3), dtype=np.float32) * 255
+        pred_image: np.ndarray = np.ones((height, width, 3), dtype=np.float32) * 255
         for y in range(height):
             for x in range(width):
-                selected_colors = channel_colors[
+                selected_colors: np.ndarray = channel_colors[
                     output[0, :, y, x] > self.mask_threshold
                 ]
 
@@ -168,25 +168,25 @@ class OpenMedicInferencer:
         return pred_image.astype(np.uint8)
 
     def save_image(self, image: np.ndarray):
-        image_name = os.path.basename(self.inference_info["input_path"])
+        image_name: str = os.path.basename(self.inference_info["input_path"])
         if (
             self.inference_info["output_dir"] == ""
             or self.inference_info["output_path"] is None
         ):
             from openmedic.core.shared.services.plans.management import OpenMedicOSEnv
 
-            output_dir = os.path.join(
+            output_dir: str = os.path.join(
                 OpenMedicOSEnv.home,
                 "inference_" + get_current_time().strftime("%Y%m%d.%H%M%S"),
             )
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(
+            output_path: str = os.path.join(
                 output_dir,
                 f"pred_{image_name}",
             )
         else:
-            output_path = os.path.join(
+            output_path: str = os.path.join(
                 self.inference_info["output_dir"],
                 f"pred_{image_name}",
             )
@@ -200,10 +200,12 @@ class OpenMedicInferencer:
 
     def run_inference(self, **kwargs):
         logging.info("[inferencer][run_inference]: Starting inference process...")
-        image = self.read_input(input_path=self.inference_info["input_path"])
-        pred_image = self.preprocess(image=image)
-        output = self.inference(pred_image)
-        output = self.postprocess(output)
+        image: np.ndarray = self.read_input(
+            input_path=self.inference_info["input_path"],
+        )
+        pred_image: torch.Tensor = self.preprocess(image=image)
+        output: torch.Tensor = self.inference(pred_image)
+        output: np.ndarray = self.postprocess(output)
         self.save_image(image=output)
         logging.info("[inferencer][run_inference]: Inference process completed.")
         return output

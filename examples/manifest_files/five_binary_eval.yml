@@ -39,5 +39,5 @@ metric:
     n_classes: 2
 
 monitor:
-  CheckPoint: 
+  CheckPoint:
     mode: eval

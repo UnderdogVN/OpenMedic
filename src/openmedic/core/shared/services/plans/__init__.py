@@ -11,5 +11,5 @@ __all__ = [
     "OpenMedicTrainer",
     "OpenMedicDataset",
     "OpenMedicPipelineResult",
-    "OpenMedicInferencer"
+    "OpenMedicInferencer",
 ]

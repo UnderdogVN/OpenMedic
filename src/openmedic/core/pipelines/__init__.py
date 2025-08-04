@@ -1,6 +1,6 @@
-from . import train, infer
+from . import infer, train
 
 __all__ = [
-    "train",
-    "infer"
+        "train",
+        "infer",
 ]
