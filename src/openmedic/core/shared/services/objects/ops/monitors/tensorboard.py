@@ -1,4 +1,3 @@
-
 from torch.utils.tensorboard import SummaryWriter
 from typing import Dict, Optional, List
 import torchvision
@@ -6,11 +5,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 import numpy as np
+import os
+from openmedic.core.shared.services.plans.management import OpenMedicOSEnv, OpenMedicPipelineResult
 
 
 class TensorBoardLogger:
-    def __init__(self, log_dir: str = "runs/openmedic"):
-        self.writer = SummaryWriter(log_dir)
+    def __init__(self):
+        tensorboard_dir = os.path.join(
+            OpenMedicOSEnv.home,
+            OpenMedicPipelineResult.get_current_experiment(),
+            "tensorboard"
+        )
+        os.makedirs(tensorboard_dir, exist_ok=True)
+        self.writer = SummaryWriter(log_dir=tensorboard_dir)
         self.epoch = 0
         self.history: List[Dict] = []
 

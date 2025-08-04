@@ -120,7 +120,7 @@ class OpenMedicPipelineResult:
     def get_current_experiment(cls) -> str:
         if not cls.current_time:
             raise OpenMedicExeception("`current_time` is note initalized.")
-        return f'{cls.prefix_exp}_{cls.current_time.strftime("%Y%m%d.%H%M%S")}'
+        return f"train_{cls.current_time.strftime('%y%m%d.%H%M%S')}"
 
 
 class OpenMedicOSEnv:
