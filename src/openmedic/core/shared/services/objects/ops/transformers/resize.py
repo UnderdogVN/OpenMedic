@@ -63,6 +63,16 @@ class Resize(OpenMedicTransformOpBase):
 
         return image_copy, gt_copy
 
+    def execute_inference(self, image: np.ndarray) -> np.ndarray:
+        """Resize the image for inference."""
+        image_copy: np.ndarray = image.copy()
+        image_copy = cv2.resize(
+            src=image_copy,
+            dsize=(self.target_w, self.target_h),
+            interpolation=self.cv2_interpolation,
+        )
+        return image_copy
+
 
 def init():
     registry.TransformRegister.register(transform_class=Resize)

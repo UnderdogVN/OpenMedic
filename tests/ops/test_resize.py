@@ -8,7 +8,9 @@ def test_resize_execute():
     image: np.ndarray = np.random.randint(0, 255, (128, 128, 3), dtype=np.uint8)
     gt: np.ndarray = np.random.randint(0, 2, (128, 128), dtype=np.uint8)
     resize_op: Resize = Resize.initialize(
-        target_w=100, target_h=100, interpolation="INTER_LINEAR"
+        target_w=100,
+        target_h=100,
+        interpolation="INTER_LINEAR",
     )
     resized_image, resized_gt = resize_op.execute(image, gt)
     assert resized_image.shape == (100, 100, 3)

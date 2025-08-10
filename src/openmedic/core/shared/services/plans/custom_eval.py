@@ -18,7 +18,8 @@ class OpenMedicEvaluatorException(Exception):
     """Customizes exception for OpenMedicEvaluator"""
 
     def __init__(
-        self, message: str = "An error occurred in OpenMedicEvaluatorException"
+        self,
+        message: str = "An error occurred in OpenMedicEvaluatorException",
     ):
         self.message: str = message
         super().__init__(self.message)
