@@ -52,7 +52,12 @@ class OpenMedicInferencer:
         )
 
         if model_checkpoint:
-            model.load_state_dict(torch.load(model_checkpoint))
+            map_location = (
+                torch.device("cpu") if not torch.cuda.is_available() else None
+            )
+            model.load_state_dict(
+                torch.load(model_checkpoint, map_location=map_location)
+            )
 
         return cls(model)
 
