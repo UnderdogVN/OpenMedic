@@ -72,8 +72,13 @@ class OpenMedicTrainer:
             **model_params,
         )
         if model_checkpoint:
+            map_location = (
+                torch.device("cpu") if not torch.cuda.is_available() else None
+            )
             # TODO: Check related or absolute path
-            model.load_state_dict(torch.load(model_checkpoint))
+            model.load_state_dict(
+                torch.load(model_checkpoint, map_location=map_location)
+            )
 
         return model
 
