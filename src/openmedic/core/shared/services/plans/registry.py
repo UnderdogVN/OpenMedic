@@ -146,6 +146,7 @@ class MonitorRegister(BaseRegister):
     __TEMPLATE: str = "openmedic.core.shared.services.objects.ops.monitors.{module}"
     __MODULES: List[str] = [
         "checkpoint",
+        "tensorboard"
     ]
 
     @classmethod
