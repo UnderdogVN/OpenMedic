@@ -18,7 +18,8 @@ class OpenMedicEvaluatorException(Exception):
     """Customizes exception for OpenMedicEvaluator"""
 
     def __init__(
-        self, message: str = "An error occurred in OpenMedicEvaluatorException"
+        self,
+        message: str = "An error occurred in OpenMedicEvaluatorException",
     ):
         self.message: str = message
         super().__init__(self.message)
@@ -72,8 +73,13 @@ class OpenMedicEvaluator:
             **model_params,
         )
         if model_checkpoint:
+            map_location = (
+                torch.device("cpu") if not torch.cuda.is_available() else None
+            )
             # TODO: Check related or absolute path
-            model.load_state_dict(torch.load(model_checkpoint))
+            model.load_state_dict(
+                torch.load(model_checkpoint, map_location=map_location)
+            )
 
         return model
 

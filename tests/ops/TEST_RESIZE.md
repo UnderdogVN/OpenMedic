@@ -96,7 +96,7 @@ pytest tests/test_resize.py
 platform darwin -- Python 3.10.18, pytest-8.4.1, pluggy-1.6.0
 rootdir: /Users/voquangtran/Documents/repos/open-source/OpenMedic
 configfile: pyproject.toml
-collected 1 item                                                                                                                           
+collected 1 item
 
 tests/test_resize.py .                                                                                                               [100%]
 

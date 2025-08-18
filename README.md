@@ -8,9 +8,9 @@ OpenMedic is an open-source Python framework designed to accelerate the developm
 Please follow the [instruction](https://docs.astral.sh/uv/getting-started/installation/) to install `uv`.
 
 Setup env:
-- Set `__pycache__` location. We do not want `__pycache__` appears whenever we execute code.
+- Set `__pycache__` location if you do not want `__pycache__` directories to appear in the repo.
 ```bash
-export PYTHONPYCACHEPREFIX=~/.cache/Python
+export PYTHONPYCACHEPREFIX=~/.cache/Python # for example
 ```
 
 - Initalizes python env with dependencies. Now OpenMedic just supports `python3.10.18`.
@@ -22,6 +22,10 @@ uv venv --python 3.10.18
 ```bash
 source .venv/bin/activate
 ```
+  - If you are using a shell different than `sh`/`bash`/`zsh`, you may need to source the correct file. For example, if you are using Fish:
+    ```fish
+    source .venv/bin/activate.fish
+    ```
 
 - Installs `openmedic`:
 ```bash

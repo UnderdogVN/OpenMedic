@@ -73,8 +73,12 @@ class PipelineFieldEvaluator(BaseModel):
 
 
 class PipelineFieldInferencer(BaseModel):
-    # TODO: Need to impelement here
-    pass
+    input_path: str
+    batch_size: int = 1
+    output_dir: str = ""
+    is_gpu: bool = True
+    verbose: bool = True
+    mask_threshold: float = 0.5
 
 
 # OPTIMIZATION FIELD
@@ -135,8 +139,9 @@ class ManifestEvaluator(BaseModel):
 
 
 class ManifestInferencer(BaseModel):
-    # TODO: Need to implement here
-    pass
+    model: ModelFieldEvaluator
+    pipeline: PipelineFieldInferencer
+    transform: Optional[TransformField] = None
 
 
 """CONFIGURATION READNING"""
