@@ -5,3 +5,6 @@ uv.lock
 SUMMARY.md
 TESTS.md
 **/.DS_Store
+.openmedic
+.cursor
+*log

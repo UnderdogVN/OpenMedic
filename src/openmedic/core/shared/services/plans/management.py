@@ -331,6 +331,7 @@ class OpenMedicManager:
         metric_score: float
         train_metric_scores: list = []
         train_losses: list = []
+        total_steps: int = len(self.train_loader)
         for step, (images, gts) in enumerate(self.train_loader, 1):
             images, gts = self._process_batch(
                 images=images,
@@ -343,20 +344,40 @@ class OpenMedicManager:
             loss.backward()
             self.optimizer.step()
 
-            if step % 10 == 0 and self.pipeline_info["verbose"]:
-                print(
-                    f"\r\tTraining in step {step} with loss {statistics.mean(train_losses):.5f} and metric score: {statistics.mean(train_metric_scores):.5f}",
-                    end="",
-                    flush=True,
-                )
+            if self.pipeline_info["verbose"]:
+                try:
+                    from openmedic.core.shared.services import TrainingConsole
+
+                    TrainingConsole().print_step_progress(
+                        epoch_idx=epoch,
+                        num_epochs=self.pipeline_info["n_epochs"],
+                        step_idx=step,
+                        total_steps=total_steps,
+                        train_loss_running=statistics.mean(train_losses),
+                        train_metric_running=statistics.mean(train_metric_scores),
+                    )
+                except Exception:
+                    pass
         train_loss_per_step: float = statistics.mean(train_losses)
         train_metric_score_per_step: float = statistics.mean(train_metric_scores)
 
         if self.pipeline_info["verbose"]:
-            print(
-                f"\r\tCompleted trainning at epoch {epoch} with loss {train_loss_per_step:.5f} and metric score: {train_metric_score_per_step:.5f}",
-                flush=True,
-            )
+            try:
+                from openmedic.core.shared.services import TrainingConsole
+
+                TrainingConsole().print_epoch(
+                    epoch_idx=epoch,
+                    num_epochs=self.pipeline_info["n_epochs"],
+                    train_loss=train_loss_per_step,
+                    eval_loss=None,
+                    train_metric=train_metric_score_per_step,
+                    eval_metric=None,
+                )
+            except Exception:
+                print(
+                    f"\r\tCompleted trainning at epoch {epoch} with loss {train_loss_per_step:.5f} and metric score: {train_metric_score_per_step:.5f}",
+                    flush=True,
+                )
 
         # Update to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(
@@ -464,19 +485,28 @@ class OpenMedicManager:
                 eval_metric_scores.append(metric_score)
                 eval_losses.append(loss.item())
 
-                if step % 10 == 0 and self.pipeline_info["verbose"]:
-                    print(
-                        f"\r\tEvaluating in step {step} with loss {statistics.mean(eval_losses):.5f} and metric score: {statistics.mean(eval_metric_scores):.5f}",
-                        end="",
-                        flush=True,
-                    )
+                # Suppress noisy per-step eval prints to keep the epoch summary readable
+                # Final evaluation metrics will be printed after aggregation
             eval_loss_per_step: float = statistics.mean(eval_losses)
             eval_metric_score_per_step: float = statistics.mean(eval_metric_scores)
             if self.pipeline_info["verbose"]:
-                print(
-                    f"\r\tCompleted evaluation at epoch {epoch} with loss {eval_loss_per_step:.5f} and metric score: {eval_metric_score_per_step:.5f}",
-                    flush=True,
-                )
+                try:
+                    from openmedic.core.shared.services import TrainingConsole
+
+                    # Only print the eval line; the training line was printed previously
+                    TrainingConsole().print_epoch(
+                        epoch_idx=epoch,
+                        num_epochs=self.pipeline_info["n_epochs"],
+                        train_loss=None,
+                        eval_loss=eval_loss_per_step,
+                        train_metric=None,
+                        eval_metric=eval_metric_score_per_step,
+                    )
+                except Exception:
+                    print(
+                        f"\r\tCompleted evaluation at epoch {epoch} with loss {eval_loss_per_step:.5f} and metric score: {eval_metric_score_per_step:.5f}",
+                        flush=True,
+                    )
 
         # Update to OpenMedicPipelineResult
         OpenMedicPipelineResult.update(attr_name="eval_losses", val=eval_loss_per_step)
