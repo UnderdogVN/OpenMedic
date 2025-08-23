@@ -12,11 +12,14 @@ import warnings
 import openmedic.core.shared.services as services
 import openmedic.core.shared.services.plans as plans
 
-logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
 def run(*, config_path: str) -> dict:
+    services.setup_experiment_logger(
+        log_filename="inference.log",
+        options=services.LoggerOptions(filename="inference.log", enable_console=True, enable_color=True),
+    )
     logging.info("[inference][run]: Planning inference pipeline...")
     services.ConfigReader.initialize(config_path=config_path, mode="infer")
     open_inferencer = plans.OpenMedicInferencer.initialize_with_config()

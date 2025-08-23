@@ -6,7 +6,6 @@ import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
 import openmedic.core.shared.services.plans as plans
 
-logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
@@ -23,6 +22,10 @@ def run(*, config_path: str) -> dict:
     -------
         dict - Returns evaluation results with timestamp.
     """
+    services.setup_experiment_logger(
+        log_filename="evaluation.log",
+        options=services.LoggerOptions(filename="evaluation.log", enable_console=True, enable_color=True),
+    )
     logging.info(f"[eval][run]: Planning evaluation pipeline...")
     services.ConfigReader.initialize(config_path=config_path, mode="eval")
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()

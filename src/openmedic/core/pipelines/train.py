@@ -6,15 +6,21 @@ import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
 import openmedic.core.shared.services.plans as plans
 
-logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
-
 
 ### MAIN PIPELINE ###
 @helper.montior
 def run(*, config_path: str) -> dict:
+    services.setup_experiment_logger(
+        log_filename="training.log",
+        options=services.LoggerOptions(filename="training.log", enable_console=True, enable_color=True),
+    )
     logging.info(f"[train][run]: Planning train pipeline...")
     services.ConfigReader.initialize(config_path=config_path, mode="train")
+<<<<<<< HEAD
+=======
+    console = services.TrainingConsole()
+>>>>>>> 66b1e18 (e4540f)
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_train()
     now: datetime = plans.OpenMedicPipelineResult.current_time
@@ -24,7 +30,6 @@ def run(*, config_path: str) -> dict:
     n_epochs: int = open_manager.pipeline_info["n_epochs"]
     # breakpoint()
     for epoch in range(1, n_epochs + 1):
-        logging.info(f"[train][run]: Running epoch: {epoch}/{n_epochs}...")
 
         # Training progress
         open_manager.activate_train()
@@ -34,6 +39,28 @@ def run(*, config_path: str) -> dict:
         open_manager.activate_eval()
         open_manager.execute_eval_per_epoch(epoch=epoch)
 
+<<<<<<< HEAD
+=======
+        # Console summary (single-line per epoch)
+        scores = plans.OpenMedicPipelineResult.get_scores()
+        train_losses = scores.get("train_losses", []) or []
+        eval_losses = scores.get("eval_losses", []) or []
+        train_metrics = scores.get("train_metric_scores", []) or []
+        eval_metrics = scores.get("eval_metric_scores", []) or []
+        train_loss = train_losses[-1] if len(train_losses) > 0 else None
+        eval_loss = eval_losses[-1] if len(eval_losses) > 0 else None
+        train_metric = train_metrics[-1] if len(train_metrics) > 0 else None
+        eval_metric = eval_metrics[-1] if len(eval_metrics) > 0 else None
+        console.print_epoch(
+            epoch_idx=epoch,
+            num_epochs=n_epochs,
+            train_loss=train_loss,
+            eval_loss=eval_loss,
+            train_metric=train_metric,
+            eval_metric=eval_metric,
+        )
+
+>>>>>>> 66b1e18 (e4540f)
         # Monitor progress
         open_manager.monitor_per_epoch()
 
