@@ -17,10 +17,7 @@ def run(*, config_path: str) -> dict:
     )
     logging.info(f"[train][run]: Planning train pipeline...")
     services.ConfigReader.initialize(config_path=config_path, mode="train")
-<<<<<<< HEAD
-=======
     console = services.TrainingConsole()
->>>>>>> 66b1e18 (e4540f)
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_train()
     now: datetime = plans.OpenMedicPipelineResult.current_time
@@ -29,6 +26,7 @@ def run(*, config_path: str) -> dict:
     logging.info(f"[train][run]: Executing train pipeline...")
     n_epochs: int = open_manager.pipeline_info["n_epochs"]
     # breakpoint()
+    console.print_header()
     for epoch in range(1, n_epochs + 1):
 
         # Training progress
@@ -39,8 +37,6 @@ def run(*, config_path: str) -> dict:
         open_manager.activate_eval()
         open_manager.execute_eval_per_epoch(epoch=epoch)
 
-<<<<<<< HEAD
-=======
         # Console summary (single-line per epoch)
         scores = plans.OpenMedicPipelineResult.get_scores()
         train_losses = scores.get("train_losses", []) or []
@@ -60,7 +56,6 @@ def run(*, config_path: str) -> dict:
             eval_metric=eval_metric,
         )
 
->>>>>>> 66b1e18 (e4540f)
         # Monitor progress
         open_manager.monitor_per_epoch()
 
