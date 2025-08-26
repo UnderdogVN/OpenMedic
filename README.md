@@ -43,9 +43,6 @@ openmedic --version
 ### 2.0 (Optional) Run GitHub Actions locally using either option below:
     - <ins>Option A:</ins> Use Nix:
       - Install [Nix](https://nixos.org/download/)
-      - Enable Nix Flakes by adding to `~/.config/nix/nix.conf`:
-        ```
-        experimental-features = nix-command flakes
-        ```
+      - Enable Nix Flakes by adding to `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`:
       - Run `nix develop`
     - <ins>Option B:</ins> Install [act](https://nektosact.com/) any way you like 
