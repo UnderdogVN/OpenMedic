@@ -26,9 +26,8 @@ class OpenMedicLossFunction:
     def _preprocess_torch(cls, **kwargs) -> dict:
         # Process `weight` parameter from list to torch.Tensor
         if kwargs.get("weight", None):
-            device: str = "cpu"
-            if ConfigReader.get_field(name="pipeline").get("is_gpu", False):
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            engine = ConfigReader.get_field(name="pipeline").get("engine", "cpu")
+            device = torch.device(engine)
             kwargs["weight"] = torch.tensor(kwargs["weight"], device=device)
 
         return kwargs
