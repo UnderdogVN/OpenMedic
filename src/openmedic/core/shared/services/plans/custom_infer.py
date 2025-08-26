@@ -125,13 +125,13 @@ class OpenMedicInferencer:
         elif image_copy.ndim != 4:
             raise ValueError("Processed image must be 3D or 4D after conversion.")
 
-        if self.inference_info["is_gpu"]:
-            image_copy: torch.Tensor = image_copy.to(torch.device("cuda"))
+        engine = self.inference_info["engine"]
+        image_copy: torch.Tensor = image_copy.to(torch.device(engine))
         return image_copy
 
     def inference(self, image: torch.Tensor) -> torch.Tensor:
-        if self.inference_info["is_gpu"]:
-            self.model: OpenMedicModelBase = self.model.to(torch.device("cuda"))
+        engine = self.inference_info["engine"]
+        self.model: OpenMedicModelBase = self.model.to(torch.device(engine))
         self.model.eval()
         with torch.no_grad():
             output: torch.Tensor = self.model(image)

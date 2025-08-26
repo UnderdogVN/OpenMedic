@@ -1,7 +1,16 @@
+# Python
 .venv/**
 openmedic.egg-info
 uv.lock
 **/__pycache__/**
+
+# MacOS
+**/.DS_Store
+
+# direnv
+.envrc
+.direnv
+
+# Misc
 SUMMARY.md
 TESTS.md
-**/.DS_Store
