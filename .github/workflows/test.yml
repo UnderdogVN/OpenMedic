@@ -8,7 +8,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+    permissions:
+      # Gives the action the necessary permissions for publishing new
+      # comments in pull requests.
+      pull-requests: write
+      # Gives the action the necessary permissions for editing existing
+      # comments (to avoid publishing multiple comments in the same PR)
+      contents: write
+      # Gives the action the necessary permissions for looking up the
+      # workflow that launched this workflow, and download the related
+      # artifact that contains the comment to be published
+      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
