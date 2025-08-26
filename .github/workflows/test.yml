@@ -19,6 +19,8 @@ jobs:
       # workflow that launched this workflow, and download the related
       # artifact that contains the comment to be published
       actions: read
+      # For PR annotations
+      checks: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
