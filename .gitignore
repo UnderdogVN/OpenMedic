@@ -9,6 +9,7 @@ uv.lock
 
 # direnv
 .envrc
+.direnv
 
 # Misc
 SUMMARY.md
