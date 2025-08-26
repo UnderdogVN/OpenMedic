@@ -5,6 +5,11 @@ on:
     branches:
       - dev
 
+# Cancel running jobs if a new commit is pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
