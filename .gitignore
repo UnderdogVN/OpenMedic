@@ -7,6 +7,10 @@ uv.lock
 # MacOS
 **/.DS_Store
 
+# direnv
+.envrc
+.direnv
+
 # Misc
 SUMMARY.md
 TESTS.md
