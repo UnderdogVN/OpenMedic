@@ -23,7 +23,7 @@ pipeline:
   is_shuffle: false
   train_ratio: 0.8
   n_epochs: 50
-  is_gpu: true
+  engine: cuda
   verbose: true
 
 optimization:

@@ -19,7 +19,7 @@ model:
 
 pipeline:
   batch_size: 4
-  is_gpu: true
+  engine: cuda
   verbose: true
 
 loss_function:
