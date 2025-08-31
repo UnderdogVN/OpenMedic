@@ -343,12 +343,21 @@ class OpenMedicManager:
             loss.backward()
             self.optimizer.step()
 
-            if step % 10 == 0 and self.pipeline_info["verbose"]:
-                print(
-                    f"\r\tTraining in step {step} with loss {statistics.mean(train_losses):.5f} and metric score: {statistics.mean(train_metric_scores):.5f}",
-                    end="",
-                    flush=True,
-                )
+            if self.pipeline_info.get("verbose", False):
+                try:
+                    # Import singleton directly to follow new convention
+                    from openmedic.core.shared.services.logger import logger
+
+                    logger.train_progress(
+                        epoch_idx=epoch,
+                        num_epochs=self.pipeline_info["n_epochs"],
+                        step_idx=step,
+                        total_steps=len(self.train_loader),
+                        train_loss_running=statistics.mean(train_losses),
+                        train_metric_running=statistics.mean(train_metric_scores),
+                    )
+                except Exception:
+                    pass
         train_loss_per_step: float = statistics.mean(train_losses)
         train_metric_score_per_step: float = statistics.mean(train_metric_scores)
 
@@ -461,9 +470,10 @@ class OpenMedicManager:
                 eval_losses.append(loss.item())
                 if self.pipeline_info.get("verbose", False):
                     try:
-                        from openmedic.core.shared.services import TrainingConsole
+                        # Import singleton directly to follow new convention
+                        from openmedic.core.shared.services.logger import logger
 
-                        TrainingConsole().print_eval_step_progress(
+                        logger.eval_progress(
                             epoch_idx=epoch,
                             num_epochs=self.pipeline_info["n_epochs"] if self._mode == "train" else 1,
                             step_idx=step,

@@ -1,32 +1,27 @@
 import datetime
-import logging
 import warnings
 
 import openmedic.core.shared.helper as helper
 import openmedic.core.shared.services as services
 import openmedic.core.shared.services.plans as plans
+from openmedic.core.shared.services.logger import logger
 
 warnings.filterwarnings("ignore")
 
 ### MAIN PIPELINE ###
 @helper.montior
 def run(*, config_path: str) -> dict:
-    services.setup_experiment_logger(
-        log_filename="training.log",
-        options=services.LoggerOptions(filename="training.log", enable_console=True, enable_color=True),
-    )
-    logging.info(f"[train][run]: Planning train pipeline...")
+    logger.info(f"[train][run]: Planning train pipeline...")
     services.ConfigReader.initialize(config_path=config_path, mode="train")
-    console = services.TrainingConsole()
     open_manager: plans.OpenMedicManager = plans.OpenMedicManager()
     open_manager.plan_train()
     now: datetime = plans.OpenMedicPipelineResult.current_time
     ts: int = int(now.timestamp())
 
-    logging.info(f"[train][run]: Executing train pipeline...")
+    logger.info(f"[train][run]: Executing train pipeline...")
     n_epochs: int = open_manager.pipeline_info["n_epochs"]
     # breakpoint()
-    console.print_header()
+    logger.header()
     for epoch in range(1, n_epochs + 1):
 
         # Training progress
@@ -47,7 +42,7 @@ def run(*, config_path: str) -> dict:
         eval_loss = eval_losses[-1] if len(eval_losses) > 0 else None
         train_metric = train_metrics[-1] if len(train_metrics) > 0 else None
         eval_metric = eval_metrics[-1] if len(eval_metrics) > 0 else None
-        console.print_epoch(
+        logger.print_epoch(
             epoch_idx=epoch,
             num_epochs=n_epochs,
             train_loss=train_loss,
