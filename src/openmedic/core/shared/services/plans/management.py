@@ -16,6 +16,7 @@ from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
 from openmedic.core.shared.services.plans.custom_infer import OpenMedicInferencer
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
+from openmedic.core.shared.services.objects.monitor import OpenMedicMonitor
 
 
 class OpenMedicExeception(Exception):
@@ -194,6 +195,7 @@ class OpenMedicManager:
         self.data_info: dict = {}
         self.device: str = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._mode: str = ""
+        self.tb = None 
 
     def _train_val_split(self) -> List[OpenMedicDataset]:
         """Splits dataset to train/val datasets.
@@ -290,6 +292,18 @@ class OpenMedicManager:
 
         OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
+        try:
+            use_tb = bool(self.pipeline_info.get("use_tensorboard", True))
+        except Exception:
+            use_tb = True
+        try:
+            if self.tb is None:
+                TB = OpenMedicMonitor.get_op("TensorBoard")
+                self.tb = TB.initialize(is_activate=use_tb)  # giữ đúng API tensorboard cũ
+        except Exception as e:
+            logging.warning(f"[OpenMedicManager][plan_train] TensorBoard init skipped: {e}")
+            self.tb = None
+
     def activate_train(self):
         """Activate train mode."""
         self.open_model.train()
@@ -364,6 +378,19 @@ class OpenMedicManager:
             val=train_metric_score_per_step,
         )
 
+        try:
+            if self.tb is not None:
+                self.tb.execute_epoch({
+                    "epoch": epoch,
+                    "scalars": {
+                        "train_loss": train_loss_per_step,
+                        "train_metric": train_metric_score_per_step,
+                    },
+                    "advance_epoch": False,
+                })
+        except Exception as e:
+            logging.warning(f"[OpenMedicManager][execute_train_per_epoch] TB log skipped: {e}")
+
     def monitor_per_epoch(self, **kwargs):
         """Execute monitor process per epoch.
         Update latest state `open_model` to OpenMedicPipelineResult.
@@ -400,27 +427,21 @@ class OpenMedicManager:
 
         OpenMedicPipelineResult.init_metadata(mode=self._mode)
 
+        try:
+            use_tb = bool(self.pipeline_info.get("use_tensorboard", True))
+        except Exception:
+            use_tb = True
+        try:
+            if self.tb is None:
+                TB = OpenMedicMonitor.get_op("TensorBoard")
+                self.tb = TB.initialize(is_activate=use_tb)
+        except Exception as e:
+            logging.warning(f"[OpenMedicManager][plan_eval] TensorBoard init skipped: {e}")
+            self.tb = None
+
     def execute_eval_per_epoch(self, epoch: int):
         """Execute evaluation process per epoch.
         --> Update `eval_losses` and `eval_metric_scores` to OpenMedicPipelineResult
-
-        Input:
-        ------
-            epoch: int - The current epoch.
-
-        Usage:
-        ------
-        ```
-            open_manager.plan_eval(
-                config_path=config_path
-            )
-
-            open_manager.activate_eval()
-            open_manager.execute_eval_per_epoch(epoch=1)
-
-            # Monitor progress (if monitors are configured)
-            open_manager.monitor_per_epoch()
-        ```
         """
         step: int
         images: torch.Tensor
@@ -472,3 +493,16 @@ class OpenMedicManager:
             attr_name="eval_metric_scores",
             val=eval_metric_score_per_step,
         )
+
+        try:
+            if self.tb is not None:
+                self.tb.execute_epoch({
+                    "epoch": epoch,
+                    "scalars": {
+                        "eval_loss": eval_loss_per_step,
+                        "eval_metric": eval_metric_score_per_step,
+                    },
+                    "advance_epoch": True,
+                })
+        except Exception as e:
+            logging.warning(f"[OpenMedicManager][execute_eval_per_epoch] TB log skipped: {e}")
