@@ -16,6 +16,7 @@ from openmedic.core.shared.services.plans.management import (
     OpenMedicOSEnv,
     OpenMedicPipelineResult,
 )
+from openmedic.core.shared.services.logger import logger
 
 
 @dataclass
@@ -78,7 +79,7 @@ class CheckPoint(OpenMedicMonitorOpBase):
         target_score: str = ""
         patience: Optional[int] = None
 
-        logging.info(
+        logger.info(
             f"[CheckPoint][initialize]: All artifacts will be saved in {model_dir}"
         )
 
@@ -149,8 +150,8 @@ class CheckPoint(OpenMedicMonitorOpBase):
             compare_operator = ">" if self.target_score.endswith("losses") else "<"
             if self.best_score:
                 if eval(f"{self.best_score} {compare_operator} {latest_score}"):
-                    logging.info(
-                        f"[CheckPoint][execute]: Found best score {latest_score} from {self.best_score}",
+                    logger.checkpoint(
+                        f"[CheckPoint][execute]: Found best score {latest_score} from {self.best_score}"
                     )
                     self.best_score = latest_score
                     # Reset `_count`
@@ -159,8 +160,8 @@ class CheckPoint(OpenMedicMonitorOpBase):
                     self._count += 1
                     is_save_model = False
             else:
-                logging.info(
-                    f"[CheckPoint][execute]: Save best score to {latest_score}",
+                logger.checkpoint(
+                    f"[CheckPoint][execute]: Save best score to {latest_score}"
                 )
                 self.best_score = latest_score
 

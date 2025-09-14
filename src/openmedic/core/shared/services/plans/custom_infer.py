@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import torch
 
+from openmedic.core.shared.services.plans.management import OpenMedicOSEnv
 from openmedic.core.shared.services.config import ConfigReader
 from openmedic.core.shared.services.objects.model import (
     OpenMedicModel,
@@ -178,8 +179,6 @@ class OpenMedicInferencer:
             self.inference_info["output_dir"] == ""
             or self.inference_info["output_path"] is None
         ):
-            from openmedic.core.shared.services.plans.management import OpenMedicOSEnv
-
             output_dir: str = os.path.join(
                 OpenMedicOSEnv.home,
                 "inference_" + get_current_time().strftime("%Y%m%d.%H%M%S"),

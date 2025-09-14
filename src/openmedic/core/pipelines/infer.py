@@ -6,24 +6,23 @@ Usage:
 """
 
 import datetime
-import logging
 import warnings
 
 import openmedic.core.shared.services as services
 import openmedic.core.shared.services.plans as plans
+from openmedic.core.shared.services.logger import logger
 
-logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
 def run(*, config_path: str) -> dict:
-    logging.info("[inference][run]: Planning inference pipeline...")
+    logger.info("[inference][run]: Planning inference pipeline...")
     services.ConfigReader.initialize(config_path=config_path, mode="infer")
     open_inferencer = plans.OpenMedicInferencer.initialize_with_config()
     open_inferencer.run_inference()
     now: datetime = plans.OpenMedicPipelineResult.current_time
     ts: int = int(now.timestamp())
-    logging.info(f"[inference][run]: Inference completed at {now} (timestamp: {ts})")
+    logger.info(f"[inference][run]: Inference completed at {now} (timestamp: {ts})")
     return {
         "timestamp": ts,
     }
