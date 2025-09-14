@@ -16,6 +16,7 @@ from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
 from openmedic.core.shared.services.plans.custom_infer import OpenMedicInferencer
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
+from openmedic.core.shared.services.logger import logger
 
 
 class OpenMedicExeception(Exception):
@@ -345,9 +346,6 @@ class OpenMedicManager:
 
             if self.pipeline_info.get("verbose", False):
                 try:
-                    # Import singleton directly to follow new convention
-                    from openmedic.core.shared.services.logger import logger
-
                     logger.train_progress(
                         epoch_idx=epoch,
                         num_epochs=self.pipeline_info["n_epochs"],
@@ -470,9 +468,6 @@ class OpenMedicManager:
                 eval_losses.append(loss.item())
                 if self.pipeline_info.get("verbose", False):
                     try:
-                        # Import singleton directly to follow new convention
-                        from openmedic.core.shared.services.logger import logger
-
                         logger.eval_progress(
                             epoch_idx=epoch,
                             num_epochs=self.pipeline_info["n_epochs"] if self._mode == "train" else 1,

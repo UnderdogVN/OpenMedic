@@ -1,6 +1,15 @@
 import logging
 import logging.config
 import os
+import re
+import torch
+import yaml
+import sys
+from logging.handlers import RotatingFileHandler
+from openmedic.core.shared.services.plans.management import (
+    OpenMedicOSEnv,
+    OpenMedicPipelineResult,
+)
 from typing import Optional
 
 
@@ -16,13 +25,8 @@ class OpenMedicLogger:
         self._progress_len: int = 0
 
     # ---------- Core setup ----------
-    def _compute_experiment_dir(self) -> str:
+    def _get_experiment_dir(self) -> str:
         """Return the absolute experiment directory path and ensure existence."""
-        from openmedic.core.shared.services.plans.management import (
-            OpenMedicOSEnv,
-            OpenMedicPipelineResult,
-        )
-
         experiment_dir: str = os.path.join(
             OpenMedicOSEnv.home,
             OpenMedicPipelineResult.get_current_experiment(),
@@ -58,7 +62,6 @@ class OpenMedicLogger:
             one = " | ".join(part.strip() for part in raw.splitlines())
             if getattr(self, "_console_color_enabled", False):
                 try:
-                    import re
                     one = re.sub(r"(\[[^\]]+\])", lambda m: "\x1b[1m" + m.group(1) + "\x1b[0m", one)
                 except Exception:
                     pass
@@ -114,8 +117,6 @@ class OpenMedicLogger:
             return
 
         if use_rotation:
-            from logging.handlers import RotatingFileHandler
-
             file_handler: logging.Handler = RotatingFileHandler(
                 log_path, mode="a", maxBytes=max_bytes, backupCount=backup_count
             )
@@ -143,7 +144,7 @@ class OpenMedicLogger:
             return self._log_file_path
 
         chosen_filename: str = filename or self._DEFAULT_FILENAME
-        experiment_dir: str = self._compute_experiment_dir()
+        experiment_dir: str = self._get_experiment_dir()
         log_path: str = os.path.join(experiment_dir, chosen_filename)
 
         root_logger = logging.getLogger()
@@ -156,8 +157,6 @@ class OpenMedicLogger:
 
         if config_path and os.path.isfile(config_path):
             try:
-                import yaml
-
                 with open(config_path, "r") as f:
                     cfg = yaml.safe_load(f)
                 handlers = (cfg or {}).get("handlers", {})
@@ -246,8 +245,6 @@ class OpenMedicLogger:
     # ---------- Console helpers (methods, no nested classes) ----------
     def _supports_color(self) -> bool:
         try:
-            import sys
-
             return sys.stdout.isatty()
         except Exception:
             return False
@@ -260,16 +257,12 @@ class OpenMedicLogger:
     @staticmethod
     def _visible_len(text: str) -> int:
         try:
-            import re
-
             return len(re.sub(r"\x1b\[[0-9;]*m", "", text))
         except Exception:
             return len(text)
 
     def _get_gpu_mem(self) -> str:
         try:
-            import torch
-
             if torch.cuda.is_available():
                 mem_bytes: int = torch.cuda.memory_reserved(0)
                 mem_gb: float = mem_bytes / 1e9
