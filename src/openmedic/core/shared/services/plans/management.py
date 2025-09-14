@@ -16,7 +16,6 @@ from openmedic.core.shared.services.plans.custom_dataset import OpenMedicDataset
 from openmedic.core.shared.services.plans.custom_eval import OpenMedicEvaluator
 from openmedic.core.shared.services.plans.custom_infer import OpenMedicInferencer
 from openmedic.core.shared.services.plans.custom_train import OpenMedicTrainer
-from openmedic.core.shared.services.objects.monitor import OpenMedicMonitor
 
 
 class OpenMedicExeception(Exception):
@@ -156,6 +155,7 @@ class OpenMedicManager:
 
     @classmethod
     def _get_inference_objects(cls) -> OpenMedicInferencer:
+        # TODO: Need to implement logics
         """Gets OpenMedic objects for inference pipeline."""
         return OpenMedicInferencer.initialize_with_config()
 
@@ -364,13 +364,6 @@ class OpenMedicManager:
             val=train_metric_score_per_step,
         )
 
-        # TensorBoard logging
-        OpenMedicMonitor.log_epoch({
-            "epoch": epoch,
-            "train_loss": train_loss_per_step,
-            "train_metric": train_metric_score_per_step
-        })
-
     def monitor_per_epoch(self, **kwargs):
         """Execute monitor process per epoch.
         Update latest state `open_model` to OpenMedicPipelineResult.
@@ -479,10 +472,3 @@ class OpenMedicManager:
             attr_name="eval_metric_scores",
             val=eval_metric_score_per_step,
         )
-
-        # TensorBoard logging
-        OpenMedicMonitor.log_epoch({
-            "epoch": epoch,
-            "eval_loss": eval_loss_per_step,
-            "eval_metric": eval_metric_score_per_step
-        })

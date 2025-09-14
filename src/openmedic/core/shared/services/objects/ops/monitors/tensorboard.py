@@ -20,6 +20,7 @@ class TensorBoard(OpenMedicMonitorOpBase):
         self.is_activate: bool = is_activate
         self.epoch = 0
         self.history: List[Dict] = []
+        self.global_step: int = 0
 
     @classmethod
     def initialize(cls, is_activate: bool = True):
@@ -38,6 +39,127 @@ class TensorBoard(OpenMedicMonitorOpBase):
         else:
             writer = None
         return cls(writer, is_activate)
+
+    def execute_step(self, payload: Dict):
+        """
+        Ghi log theo bước (batch/step). Không thay đổi behavior cũ.
+        payload (tùy chọn):
+          - step: int
+          - epoch: int
+          - lr: float
+          - scalars: Dict[str, float]          # ví dụ {"train_loss": ..., "acc_batch": ...}
+          - images: Dict[str, Tensor/ndarray]  # {"samples": tensor_or_numpy}
+          - histograms: Dict[str, Tensor/ndarray]
+        """
+        if not self.is_activate or self.writer is None:
+            return
+
+        if "step" in payload:
+            try:
+                self.global_step = int(payload["step"])
+            except Exception:
+                pass
+        else:
+            self.global_step += 1
+
+        if "epoch" in payload:
+            try:
+                self.epoch = int(payload["epoch"])
+            except Exception:
+                pass
+
+        lr = payload.get("lr", None)
+        if isinstance(lr, (int, float)):
+            self._log_learning_rate(float(lr), epoch=self.epoch)
+
+        scalars = payload.get("scalars") or {}
+        if isinstance(scalars, dict) and scalars:
+            self._log_metrics(
+                {k: float(v) for k, v in scalars.items() if isinstance(v, (int, float))},
+                epoch=self.epoch
+            )
+
+        images = payload.get("images") or {}
+        if isinstance(images, dict):
+            for tag, img in images.items():
+                try:
+                    self._log_image(tag, img, epoch=self.epoch)
+                except Exception:
+                    logging.exception("[TensorBoard][execute_step] log_image failed: %s", tag)
+
+        histos = payload.get("histograms") or {}
+        if isinstance(histos, dict):
+            for name, values in histos.items():
+                try:
+                    self._log_histogram(name, values, epoch=self.epoch)
+                except Exception:
+                    logging.exception("[TensorBoard][execute_step] log_histogram failed: %s", name)
+
+    def execute_epoch(self, payload: Dict):
+
+        if not self.is_activate or self.writer is None:
+            return
+
+        if "epoch" in payload:
+            try:
+                self.epoch = int(payload["epoch"])
+            except Exception:
+                pass
+
+        lr = payload.get("lr", None)
+        if isinstance(lr, (int, float)):
+            self._log_learning_rate(float(lr), epoch=self.epoch)
+
+        scalars = payload.get("scalars") or {}
+        if isinstance(scalars, dict) and scalars:
+            self._log_metrics(
+                {k: float(v) for k, v in scalars.items() if isinstance(v, (int, float))},
+                epoch=self.epoch
+            )
+
+        figures = payload.get("figures") or {}
+        if isinstance(figures, dict):
+            for tag, fig in figures.items():
+                try:
+                    self._log_figure(tag, fig, epoch=self.epoch)
+                except Exception:
+                    logging.exception("[TensorBoard][execute_epoch] log_figure failed: %s", tag)
+
+        histos = payload.get("histograms") or {}
+        if isinstance(histos, dict):
+            for name, values in histos.items():
+                try:
+                    self._log_histogram(name, values, epoch=self.epoch)
+                except Exception:
+                    logging.exception("[TensorBoard][execute_epoch] log_histogram failed: %s", name)
+
+        images = payload.get("images") or {}
+        if isinstance(images, dict):
+            for tag, img in images.items():
+                try:
+                    self._log_image(tag, img, epoch=self.epoch)
+                except Exception:
+                    logging.exception("[TensorBoard][execute_epoch] log_image failed: %s", tag)
+
+        cm_cfg = payload.get("confusion_matrix")
+        if isinstance(cm_cfg, dict):
+            try:
+                self._log_confusion_matrix(
+                    cm_cfg.get("y_true"),
+                    cm_cfg.get("y_pred"),
+                    cm_cfg.get("class_names", []),
+                    epoch=self.epoch,
+                    normalize=bool(cm_cfg.get("normalize", False)),
+                )
+            except Exception:
+                logging.exception("[TensorBoard][execute_epoch] log_confusion_matrix failed")
+
+        if bool(payload.get("save_result", True)):
+            result_numeric = {k: float(v) for k, v in scalars.items() if isinstance(v, (int, float))}
+            self._save_epoch_result({"epoch": self.epoch, **result_numeric})
+
+        if bool(payload.get("advance_epoch", True)):
+            self._step_epoch()
 
     def execute(self):
         if not self.is_activate or self.writer is None:
