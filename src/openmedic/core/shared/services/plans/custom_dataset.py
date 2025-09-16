@@ -6,6 +6,7 @@ from pycocotools.coco import COCO
 import numpy as np
 import logging
 import torch
+import pydicom
 
 from openmedic.core.shared.services.objects.transform import OpenMedicTransform, OpenMedicTransformOpBase
 from openmedic.core.shared.services.config import ConfigReader
@@ -101,6 +102,25 @@ class OpenMedicDataset(Dataset):
 
     def __len__(self):
         return len(self.img_ids)
+    
+    def read_image(self, image_dir: str, image_filename: str) -> np.ndarray:
+        image_path = os.path.join(image_dir, image_filename)
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+
+        # check the type of image by its extension (only support .png, .jpg, .jpeg, and .dcm)
+        ext = os.path.splitext(image_filename)[1].lower()
+        if ext in ['.png', '.jpg', '.jpeg']:
+            common_image = cv2.imread(image_path)
+            image = cv2.cvtColor(common_image, cv2.COLOR_BGR2RGB)
+        elif ext == '.dcm':
+            dicom_image = pydicom.dcmread(image_path)
+            image = dicom_image.pixel_array
+            if len(image.shape) == 2:  # grayscale to RGB
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        else:
+            raise ValueError(f"Unsupported image format: {ext}")
+        return image
 
     def __getitem__(self, idx: int) -> List[Union[np.ndarray, torch.Tensor]]:
         img_id: int = self.img_ids[idx]
@@ -112,8 +132,9 @@ class OpenMedicDataset(Dataset):
             img_h=img_info["height"],
             img_w=img_info["width"]
         )
-        image: np.ndarray = cv2.imread(os.path.join(self.image_dir, img_info["file_name"]))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image: np.ndarray = cv2.imread(os.path.join(self.image_dir, img_info["file_name"]))
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image: np.ndarray = self.read_image(self.image_dir, img_info["file_name"])
         if self.transform_ops:
             image, gt = self._apply_transform(image=image, gt=gt)
 
